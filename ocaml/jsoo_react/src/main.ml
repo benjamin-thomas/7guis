@@ -13,6 +13,9 @@ let create_ui () =
   ; h1##.innerText := Js.string "Counter example"
   ; btn##.innerText := Js.string "count"
   ; input##.disabled := Js.bool true
+    (* Not available unfortunately *)
+    (* ; input##.style##.userSelect := Js.string "none" *)
+  ; input##.style##.pointerEvents := Js.string "none"
   ; Dom.appendChild div h1
   ; Dom.appendChild div input
   ; Dom.appendChild div btn
