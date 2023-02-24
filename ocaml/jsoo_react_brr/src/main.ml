@@ -5,13 +5,19 @@ let (button, clicks) =
   (button, clicks)
 ;;
 
-let view =
+let r_view =
   clicks
   |> Note.S.map @@ fun count ->
-     [ Brr.El.(h1 [ txt' "Counter example" ])
-     ; Brr.El.input ~at:Brr.At.[ disabled; value (Jstr.of_int count) ] ()
-     ; button
-     ]
+     [ Brr.El.input ~at:Brr.At.[ value (Jstr.of_int count); disabled ] () ]
 ;;
 
-let () = Brr_note.Elr.def_children Brr.(Document.body G.document) view
+let () =
+  let document = Brr.(Document.body G.document) in
+  let r_container = Brr.El.span [] in
+  ()
+  ; Brr_note.Elr.def_children r_container r_view
+  ; Brr.El.set_children document
+      [ Brr.El.(h1 [ txt' "Counter example" ])
+      ; Brr.El.div [ r_container; button ]
+      ]
+;;
