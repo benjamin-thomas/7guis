@@ -1,0 +1,14 @@
+<form [formGroup]="form" autocomplete="off">
+  <input id="celsius" type="text" (keyup)="setFahrenheit()" formControlName="celsius">
+  <label for="celsius">Celsius</label>
+
+  <span> = </span>
+
+  <input id="fahrenheit" (keyup)="setCelsius()" type="text" formControlName="fahrenheit">
+  <label for="fahrenheit">Fahrenheit</label>
+</form>
+
+<div>
+  <p>{{celsiusError}}</p>
+  <p>{{fahrenheitError}}</p>
+</div>
