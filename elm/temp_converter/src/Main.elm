@@ -6,18 +6,8 @@ import Html.Attributes exposing (value)
 import Html.Events exposing (onInput)
 
 
-type alias Model =
-    { celsius : Maybe String, fahrenheit : Maybe String }
 
-
-type Msg
-    = CelsiusChanged String
-    | FahrenheitChanged String
-
-
-init : Model
-init =
-    { celsius = Nothing, fahrenheit = Nothing }
+-- UTILS
 
 
 toCelsius : Float -> Float
@@ -39,19 +29,45 @@ toNothingIfBlank s =
         Just s
 
 
-convert : (Float -> Float) -> String -> Maybe String
-convert f s =
-    Maybe.map (f >> String.fromFloat) (String.toFloat s)
+maybeConvert : (Float -> Float) -> String -> Maybe String
+maybeConvert f str =
+    Maybe.map (f >> String.fromFloat) (String.toFloat str)
+
+
+
+-- MODEL
+
+
+type alias Model =
+    { celsius : Maybe String, fahrenheit : Maybe String }
+
+
+init : Model
+init =
+    { celsius = Nothing, fahrenheit = Nothing }
+
+
+
+-- UPDATE
+
+
+type Msg
+    = CelsiusChanged String
+    | FahrenheitChanged String
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
         CelsiusChanged s ->
-            { model | celsius = toNothingIfBlank s, fahrenheit = convert toFahrenheit s }
+            { model | celsius = toNothingIfBlank s, fahrenheit = maybeConvert toFahrenheit s }
 
         FahrenheitChanged s ->
-            { model | fahrenheit = toNothingIfBlank s, celsius = convert toCelsius s }
+            { model | fahrenheit = toNothingIfBlank s, celsius = maybeConvert toCelsius s }
+
+
+
+-- VIEW
 
 
 warnOnInvalidInput : String -> Maybe String -> Html msg
@@ -86,6 +102,10 @@ view model =
             , warnOnInvalidInput "fahrenheit" model.fahrenheit
             ]
         ]
+
+
+
+-- BOOTSTRAP
 
 
 main : Program () Model Msg
