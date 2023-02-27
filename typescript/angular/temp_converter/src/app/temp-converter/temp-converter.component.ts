@@ -1,6 +1,8 @@
 import {Component} from '@angular/core';
 import {FormControl, FormGroup} from "@angular/forms";
 
+type FormValue = string | null | undefined
+
 @Component({
   selector: 'app-temp-converter',
   templateUrl: './temp-converter.component.html',
@@ -11,65 +13,51 @@ export class TempConverterComponent {
     celsius: new FormControl(''),
     fahrenheit: new FormControl(''),
   });
-  celsiusError = '';
-  fahrenheitError = '';
+  errMsg = '';
 
-  /*
-  NOTE:
-
-  This is messy, I'll try better later. Maybe deriving values from rxjs constructs could help.
-   */
-  setFahrenheit() {
-    const c_str = this.form.value.celsius;
-    const c = Number(c_str!);
+  convert(f: (_: number) => number, formValue: FormValue): string {
+    const c = Number(formValue!);
     if (c) {
-      this.form.patchValue({
-        fahrenheit: this.toFahrenheit(c).toString(),
-      });
-      this.celsiusError = '';
-      this.fahrenheitError = ''; // clear possible previous error!
+      return f(c)?.toString();
     } else {
-      this.form.patchValue({fahrenheit: ''});
-      if (!this.isEmpty(c_str)) {
-        this.celsiusError = 'Invalid celsius value!';
-      }
-      if (this.isEmpty(this.form.value.fahrenheit)) {
-        this.fahrenheitError = ''; // clear previous error, again!
-      }
+      return "";
     }
+  }
+
+
+  private setTemp(f: (_: number) => number, formValue: FormValue, errMsg: string, cb: (_: string) => void) {
+    this.errMsg = ""; // Always reset previous errors first!
+    const value = this.convert(f, formValue);
+    if (!value && !this.isEmpty(formValue)) {
+      this.errMsg = errMsg;
+    }
+    cb(value);
+  }
+
+  setFahrenheit() {
+    this.setTemp(this.toFahrenheit, this.form.value.celsius, "Invalid celsius value!", (value: string) => {
+      this.form.patchValue({fahrenheit: value});
+    });
   }
 
   setCelsius() {
-    const f_str = this.form.value.fahrenheit;
-    let f = Number(f_str!);
-    if (f) {
-      this.form.patchValue({
-        celsius: this.toCelsius(f).toString(),
-      });
-      this.fahrenheitError = '';
-      this.celsiusError = ''; // clear possible previous error!
-    } else {
-      this.form.patchValue({celsius: ''});
-      if (!this.isEmpty(f_str)) {
-        this.fahrenheitError = "Invalid fahrenheit value!";
-      }
-      if (this.isEmpty(this.form.value.celsius)) {
-        this.celsiusError = ''; // clear previous error, again!
-      }
-    }
+    this.setTemp(this.toCelsius, this.form.value.fahrenheit, "Invalid fahrenheit value!", (value: string) => {
+      this.form.patchValue({celsius: value});
+    });
   }
 
-  private toCelsius(fahrenheit: number) {
-    // C = (F - 32) * (5/9)
+
+  toCelsius(fahrenheit: number) {
     return (fahrenheit - 32) * 5 / 9;
   }
 
-  private toFahrenheit(celsius: number) {
-    // F = C * (9/5) + 32.
+
+  toFahrenheit(celsius: number) {
     return celsius * 9 / 5 + 32;
   }
 
-  private isEmpty(val: string | null | undefined) {
+
+  isEmpty(val: string | null | undefined) {
     return val === null || val === undefined || val.trim() === '';
   }
 }
