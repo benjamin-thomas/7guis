@@ -1,8 +1,8 @@
-module Main exposing (main)
+module Main exposing (..)
 
 import Browser
 import Date exposing (Date, fromCalendarDate, fromIsoString, toIsoString)
-import Html exposing (Html, button, div, input, option, select, text)
+import Html exposing (Html, button, div, h1, input, option, select, text)
 import Html.Attributes exposing (disabled, selected, style, value)
 import Html.Events exposing (onClick, onInput)
 import Time exposing (Month(..))
@@ -255,7 +255,8 @@ anyErrors model =
 view : Model -> Html Msg
 view model =
     div []
-        [ div []
+        [ h1 [] [ text "Flight Booker" ]
+        , div []
             [ select [ onInput FlightTypeChanged ]
                 [ flightOption txtOneWay model
                 , flightOption txtReturn model
