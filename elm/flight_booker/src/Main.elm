@@ -58,13 +58,36 @@ update msg model =
                 OneWay _ ->
                     OneWay (errWith s |> Result.map Departure)
 
-                RoundTrip _ mr ->
-                    RoundTrip (errWith s |> Result.map Departure) mr
+                RoundTrip _ ret ->
+                    RoundTrip (errWith s |> Result.map Departure) ret
 
         ReturnChanged s ->
             case model of
-                RoundTrip md _ ->
-                    RoundTrip md (errWith s |> Result.map Return)
+                RoundTrip dep _ ->
+                    let
+                        res : Result String Date
+                        res =
+                            let
+                                err =
+                                    errWith s
+                            in
+                            case ( err, dep ) of
+                                ( Ok r, Ok (Departure d) ) ->
+                                    if Date.compare r d == LT then
+                                        -- Bad user input, return cannot happen before departure!
+                                        Err s
+
+                                    else
+                                        err
+
+                                _ ->
+                                    err
+
+                        ret : Result String Return
+                        ret =
+                            res |> Result.map Return
+                    in
+                    RoundTrip dep ret
 
                 OneWay _ ->
                     -- FIXME: satisfy the compiler, impossible state!
