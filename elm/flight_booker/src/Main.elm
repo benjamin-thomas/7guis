@@ -1,9 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Date exposing (Date, fromCalendarDate, toIsoString)
+import Date exposing (Date, fromCalendarDate, fromIsoString, toIsoString)
 import Html exposing (Html, button, div, input, option, select, text)
-import Html.Attributes exposing (selected, value)
+import Html.Attributes exposing (selected, style, value)
 import Html.Events exposing (onInput)
 import Time exposing (Month(..))
 
@@ -17,13 +17,13 @@ type Return
 
 
 type Model
-    = OneWay (Maybe Departure)
-    | RoundTrip (Maybe Departure) (Maybe Return)
+    = OneWay (Result String Departure)
+    | RoundTrip (Result String Departure) (Result String Return)
 
 
 init : Model
 init =
-    OneWay (Just <| Departure (fromCalendarDate 2023 Mar 1))
+    OneWay (Ok <| Departure (fromCalendarDate 2023 Mar 1))
 
 
 type Msg
@@ -37,13 +37,18 @@ departureToReturn (Departure d) =
     Return d
 
 
+errWith : String -> Result String Date
+errWith s =
+    fromIsoString s |> Result.mapError (always s)
+
+
 update : Msg -> Model -> Model
 update msg model =
     case msg of
         FlightTypeChanged _ ->
             case model of
                 OneWay md ->
-                    RoundTrip md (Maybe.map departureToReturn md)
+                    RoundTrip md (Result.map departureToReturn md)
 
                 RoundTrip md _ ->
                     OneWay md
@@ -51,15 +56,15 @@ update msg model =
         DepartureChanged s ->
             case model of
                 OneWay _ ->
-                    OneWay (Date.fromIsoString s |> Result.toMaybe |> Maybe.map Departure)
+                    OneWay (errWith s |> Result.map Departure)
 
                 RoundTrip _ mr ->
-                    RoundTrip (Date.fromIsoString s |> Result.toMaybe |> Maybe.map Departure) mr
+                    RoundTrip (errWith s |> Result.map Departure) mr
 
         ReturnChanged s ->
             case model of
                 RoundTrip md _ ->
-                    RoundTrip md (Date.fromIsoString s |> Result.toMaybe |> Maybe.map Return)
+                    RoundTrip md (errWith s |> Result.map Return)
 
                 OneWay _ ->
                     -- FIXME: satisfy the compiler, impossible state!
@@ -91,42 +96,48 @@ flightOption txt model =
     option [ selected (isSelected txt model) ] [ text txt ]
 
 
+departureValue : Result String Departure -> String
+departureValue md =
+    case md of
+        Err s ->
+            s
 
--- I move away frome the requirements slightly here.
--- Returning 2 inputs for one way seems kludgy to me.
+        Ok (Departure d) ->
+            toIsoString d
 
 
-departureToIsoString : Departure -> String
-departureToIsoString (Departure d) =
-    toIsoString d
+returnValue : Result String Return -> String
+returnValue md =
+    case md of
+        Err s ->
+            s
+
+        Ok (Return d) ->
+            toIsoString d
 
 
-returnToIsoString : Return -> String
-returnToIsoString (Return r) =
-    toIsoString r
+errStyle : Result err val -> Html.Attribute msg
+errStyle e =
+    case e of
+        Err _ ->
+            style "background-color" "red"
+
+        Ok _ ->
+            style "" ""
 
 
 viewDateInputs : Model -> Html Msg
 viewDateInputs model =
     case model of
-        OneWay md ->
-            let
-                v =
-                    md |> Maybe.map departureToIsoString |> Maybe.withDefault ""
-            in
-            div [] [ input [ value v, onInput DepartureChanged ] [] ]
+        -- I move away frome the requirements slightly here.
+        -- Returning 2 inputs for one way seems kludgy to me.
+        OneWay dep ->
+            div [] [ input [ errStyle dep, value (departureValue dep), onInput DepartureChanged ] [] ]
 
-        RoundTrip md mr ->
-            let
-                departure =
-                    md |> Maybe.map departureToIsoString |> Maybe.withDefault ""
-
-                return =
-                    mr |> Maybe.map returnToIsoString |> Maybe.withDefault ""
-            in
+        RoundTrip dep ret ->
             div []
-                [ div [] [ input [ value departure ] [] ]
-                , div [] [ input [ value return ] [] ]
+                [ div [] [ input [ errStyle dep, value (departureValue dep), onInput DepartureChanged ] [] ]
+                , div [] [ input [ errStyle ret, value (returnValue ret), onInput ReturnChanged ] [] ]
                 ]
 
 
