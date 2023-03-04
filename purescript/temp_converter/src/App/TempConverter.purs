@@ -10,13 +10,14 @@ import Prelude
 
 import Control.Monad.State (get, put)
 import Data.Either (Either(..))
+import Data.Formatter.Parser.Number (parseNumber)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number as Number
-import Data.Tuple (Tuple(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Parsing (ParseError, runParser)
+import Parsing.String (eof)
 
 type State = { celsius :: Maybe String, fahrenheit :: Maybe String, error :: Either String Unit }
 
@@ -66,25 +67,18 @@ handleAction = case _ of
   CelsiusChanged s -> do
     old <- get
     let
-      (Tuple error fahrenheit) = convert s toFahrenheit "Celsius: bad input"
-    let new = old { celsius = Just s, fahrenheit = fahrenheit, error = error }
+      new = case convert s toFahrenheit of
+        Left _ -> old { fahrenheit = Nothing, error = Left "Celsius: bad input" }
+        Right n -> old { fahrenheit = Just (show n), error = Right unit }
     put new
   FahrenheitChanged s -> H.modify_ \st ->
-    let
-      (Tuple error celsius) = convert s toCelsius "Fahrenheit: bad input"
-    in
-      st { fahrenheit = Just s, celsius = celsius, error = error }
+    case convert s toCelsius of
+      Left _ -> st { celsius = Nothing, error = Left "Fahrenheit: bad input" }
+      Right n -> st { celsius = Just (show n), error = Right unit }
 
-convert :: String -> (Number -> Number) -> String -> Tuple (Either String Unit) (Maybe String)
-convert s f errMsg =
-  let
-    -- FIXME: JavaScript's parseFloat function is called under the hood.
-    -- So as a result, "1x" gets parsed to 1.0, yuck
-    maybeNum = Number.fromString s :: Maybe Number
-    mConv = maybeNum >>= \n -> Just $ show $ f n
-    error = toEither maybeNum errMsg
-  in
-    (Tuple error mConv)
+convert :: String -> (Number -> Number) -> Either ParseError Number
+convert s f =
+  map f $ runParser s (parseNumber <* eof)
 
 toFahrenheit :: Number -> Number
 toFahrenheit n =
@@ -93,11 +87,3 @@ toFahrenheit n =
 toCelsius :: Number -> Number
 toCelsius n =
   (n - 32.0) * 5.0 / 9.0
-
-toEither :: Maybe Number -> String -> Either String Unit
-toEither x msg = case x of
-  -- Left is the failure case
-  -- Right is Success
-  Just _ -> Right unit
-  Nothing -> Left msg
-
