@@ -8,20 +8,6 @@ import Html.Events exposing (onClick, onInput)
 import Time exposing (Month(..))
 
 
-
-{-
-   BUG/FIXME:
-       - make departure invalid
-       - make return invalid
-       - make return valid
-       - make departure valid
-       - IsAfterReturn state is not detected
-
-   POSSIBLE SOLUTION:
-       Handle the form change as a whole, not per input
--}
-
-
 type Departure
     = Departure Date
 
@@ -36,7 +22,7 @@ type DepartureErr
 
 type ReturnErr
     = InvalidReturnDate String
-    | IsAfterReturn String
+    | ReturnIsBeforeDeparture String
 
 
 type Model
@@ -68,9 +54,39 @@ departureToReturnErr err =
             InvalidReturnDate d
 
 
-errWith : String -> Result DepartureErr Date
-errWith s =
-    fromIsoString s |> Result.mapError (always (InvalidDepartureDate s))
+validateDepartureString : String -> Result DepartureErr Departure
+validateDepartureString s =
+    fromIsoString s
+        |> Result.mapError (always (InvalidDepartureDate s))
+        |> Result.map Departure
+
+
+validateReturnString : String -> Result ReturnErr Return
+validateReturnString s =
+    fromIsoString s
+        |> Result.mapError (always (InvalidReturnDate s))
+        |> Result.map Return
+
+
+validateNotBefore :
+    ( Result DepartureErr Departure, Result ReturnErr Return )
+    -> ( Result DepartureErr Departure, Result ReturnErr Return )
+validateNotBefore ( dep, ret ) =
+    case ( dep, ret ) of
+        ( Ok (Departure d), Ok (Return r) ) ->
+            if Date.compare r d == LT then
+                -- Bad user input, return cannot happen before departure!
+                let
+                    badRet =
+                        Err (ReturnIsBeforeDeparture (toIsoString r))
+                in
+                ( dep, badRet )
+
+            else
+                ( dep, ret )
+
+        _ ->
+            ( dep, ret )
 
 
 update : Msg -> Model -> Model
@@ -87,38 +103,31 @@ update msg model =
         DepartureChanged s ->
             case model of
                 OneWay _ ->
-                    OneWay (errWith s |> Result.map Departure)
+                    OneWay (validateDepartureString s)
 
                 RoundTrip _ ret ->
-                    RoundTrip (errWith s |> Result.map Departure) ret
+                    let
+                        dep : Result DepartureErr Departure
+                        dep =
+                            validateDepartureString s
+
+                        ( vd, vr ) =
+                            validateNotBefore ( dep, ret )
+                    in
+                    RoundTrip vd vr
 
         ReturnChanged s ->
             case model of
                 RoundTrip dep _ ->
                     let
-                        res : Result ReturnErr Date
-                        res =
-                            let
-                                err =
-                                    errWith s
-                            in
-                            case ( err, dep ) of
-                                ( Ok r, Ok (Departure d) ) ->
-                                    if Date.compare r d == LT then
-                                        -- Bad user input, return cannot happen before departure!
-                                        Err (IsAfterReturn s)
-
-                                    else
-                                        err |> Result.mapError departureToReturnErr
-
-                                _ ->
-                                    err |> Result.mapError departureToReturnErr
-
                         ret : Result ReturnErr Return
                         ret =
-                            res |> Result.map Return
+                            validateReturnString s
+
+                        ( vd, vr ) =
+                            validateNotBefore ( dep, ret )
                     in
-                    RoundTrip dep ret
+                    RoundTrip vd vr
 
                 OneWay _ ->
                     -- FIXME: satisfy the compiler, impossible state!
@@ -169,7 +178,7 @@ returnValue md =
         Err (InvalidReturnDate s) ->
             s
 
-        Err (IsAfterReturn s) ->
+        Err (ReturnIsBeforeDeparture s) ->
             s
 
         Ok (Return d) ->
@@ -205,7 +214,7 @@ invalidReturnWarning ret =
         Err (InvalidReturnDate _) ->
             text "The return date is not valid!"
 
-        Err (IsAfterReturn _) ->
+        Err (ReturnIsBeforeDeparture _) ->
             text "Return cannot happen before departure!"
 
 

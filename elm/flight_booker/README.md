@@ -1,5 +1,5 @@
 Run with:
 
 ```
-elm-live --host=0.0.0.0 src/Main.elm -- --debug
+elm-test && elm-live --host=0.0.0.0 src/Main.elm -- --debug
 ```

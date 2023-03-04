@@ -9,20 +9,6 @@ import Test.Html.Selector exposing (tag, text)
 import Time exposing (Month(..))
 
 
-
-{-
-   BUG/FIXME:
-       - make departure invalid
-       - make return invalid
-       - make return valid but before departure
-       - make departure valid (now after return)
-       - IsAfterReturn state is not detected
-
-   POSSIBLE SOLUTION:
-       Handle the form change as a whole, not per input
--}
-
-
 suite : Test
 suite =
     describe "Suite"
@@ -40,23 +26,23 @@ suite =
                     |> Query.fromHtml
                     |> Query.findAll [ tag "select" ]
                     |> Query.count (Expect.equal 1)
-        , test "bug" <|
+        , test "fix bug" <|
             \_ ->
                 let
                     initR =
                         RoundTrip
-                            (Ok <| Departure (fromCalendarDate 2023 Mar 3))
-                            (Ok <| Return (fromCalendarDate 2023 Mar 3))
+                            (Ok <| Departure (fromCalendarDate 2023 Jan 1))
+                            (Ok <| Return (fromCalendarDate 2023 Jan 1))
 
-                    final =
+                    expected =
                         RoundTrip
-                            (Ok <| Departure (fromCalendarDate 2023 Mar 3))
-                            (Ok <| Return (fromCalendarDate 2023 Feb 3))
+                            (Ok <| Departure (fromCalendarDate 2023 Jan 1))
+                            (Err <| ReturnIsBeforeDeparture "2022-01-01")
                 in
                 initR
-                    |> update (DepartureChanged "2023-03-03x")
-                    |> update (ReturnChanged "2023-03-03x")
-                    |> update (ReturnChanged "2023-02-03")
-                    |> update (DepartureChanged "2023-03-03")
-                    |> Expect.notEqual final
+                    |> update (DepartureChanged "2023x")
+                    |> update (ReturnChanged "2023x")
+                    |> update (ReturnChanged "2022")
+                    |> update (DepartureChanged "2023")
+                    |> Expect.equal expected
         ]
