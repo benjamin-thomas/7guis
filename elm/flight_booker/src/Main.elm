@@ -256,7 +256,7 @@ invalidReturnWarning ret =
 viewDateInputs : UserEdit -> Html Msg
 viewDateInputs edit =
     case edit of
-        -- I move away frome the requirements slightly here.
+        -- I move away from the requirements slightly here.
         -- Returning 2 inputs for one way seems kludgy to me.
         OneWay dep ->
             div []
