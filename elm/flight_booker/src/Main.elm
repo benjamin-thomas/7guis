@@ -8,6 +8,10 @@ import Html.Events exposing (onClick, onInput)
 import Time exposing (Month(..))
 
 
+
+-- MODEL
+
+
 type Departure
     = Departure Date
 
@@ -30,33 +34,8 @@ type Model
     | ConfirmBooking String
 
 
-type UserEdit
-    = OneWay (Result DepartureErr Departure)
-    | RoundTrip (Result DepartureErr Departure) (Result ReturnErr Return)
 
-
-init : Model
-init =
-    UserEdit <| OneWay <| Ok <| Departure <| fromCalendarDate 2023 Mar 1
-
-
-type Msg
-    = FlightTypeChanged String
-    | DepartureChanged String
-    | ReturnChanged String
-    | BookClicked
-
-
-departureToReturn : Departure -> Return
-departureToReturn (Departure d) =
-    Return d
-
-
-departureToReturnErr : DepartureErr -> ReturnErr
-departureToReturnErr err =
-    case err of
-        InvalidDepartureDate d ->
-            InvalidReturnDate d
+-- VALIDATION
 
 
 validateDepartureString : String -> Result DepartureErr Departure
@@ -94,6 +73,27 @@ validateNotBefore ( dep, ret ) =
             ( dep, ret )
 
 
+
+-- UPDATE
+
+
+type UserEdit
+    = OneWay (Result DepartureErr Departure)
+    | RoundTrip (Result DepartureErr Departure) (Result ReturnErr Return)
+
+
+init : Model
+init =
+    UserEdit <| OneWay <| Ok <| Departure <| fromCalendarDate 2023 Mar 1
+
+
+type Msg
+    = FlightTypeChanged String
+    | DepartureChanged String
+    | ReturnChanged String
+    | BookClicked
+
+
 update : Msg -> Model -> Model
 update msg model =
     case ( msg, model ) of
@@ -102,7 +102,9 @@ update msg model =
                 OneWay dep ->
                     let
                         ret =
-                            dep |> Result.map departureToReturn |> Result.mapError departureToReturnErr
+                            dep
+                                |> Result.map (\(Departure d) -> Return d)
+                                |> Result.mapError (\(InvalidDepartureDate d) -> InvalidReturnDate d)
                     in
                     UserEdit <| RoundTrip dep ret
 
@@ -170,6 +172,10 @@ update msg model =
         ( _, _ ) ->
             -- FIXME: Impossible state / satisfy the compiler. This branch should never trigger.
             model
+
+
+
+-- VIEW
 
 
 txtOneWay : String
