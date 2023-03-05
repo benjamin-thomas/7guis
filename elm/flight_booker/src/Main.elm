@@ -26,13 +26,18 @@ type ReturnErr
 
 
 type Model
+    = UserEdit UserEdit
+    | ConfirmBooking String
+
+
+type UserEdit
     = OneWay (Result DepartureErr Departure)
     | RoundTrip (Result DepartureErr Departure) (Result ReturnErr Return)
 
 
 init : Model
 init =
-    OneWay (Ok <| Departure (fromCalendarDate 2023 Mar 1))
+    UserEdit <| OneWay <| Ok <| Departure <| fromCalendarDate 2023 Mar 1
 
 
 type Msg
@@ -91,19 +96,23 @@ validateNotBefore ( dep, ret ) =
 
 update : Msg -> Model -> Model
 update msg model =
-    case msg of
-        FlightTypeChanged _ ->
-            case model of
-                OneWay md ->
-                    RoundTrip md (md |> Result.map departureToReturn |> Result.mapError departureToReturnErr)
+    case ( msg, model ) of
+        ( FlightTypeChanged _, UserEdit edit ) ->
+            case edit of
+                OneWay dep ->
+                    let
+                        ret =
+                            dep |> Result.map departureToReturn |> Result.mapError departureToReturnErr
+                    in
+                    UserEdit <| RoundTrip dep ret
 
-                RoundTrip md _ ->
-                    OneWay md
+                RoundTrip dep _ ->
+                    UserEdit <| OneWay dep
 
-        DepartureChanged s ->
-            case model of
+        ( DepartureChanged s, UserEdit edit ) ->
+            case edit of
                 OneWay _ ->
-                    OneWay (validateDepartureString s)
+                    UserEdit <| OneWay (validateDepartureString s)
 
                 RoundTrip _ ret ->
                     let
@@ -114,10 +123,10 @@ update msg model =
                         ( vd, vr ) =
                             validateNotBefore ( dep, ret )
                     in
-                    RoundTrip vd vr
+                    UserEdit <| RoundTrip vd vr
 
-        ReturnChanged s ->
-            case model of
+        ( ReturnChanged s, UserEdit edit ) ->
+            case edit of
                 RoundTrip dep _ ->
                     let
                         ret : Result ReturnErr Return
@@ -127,14 +136,40 @@ update msg model =
                         ( vd, vr ) =
                             validateNotBefore ( dep, ret )
                     in
-                    RoundTrip vd vr
+                    UserEdit <| RoundTrip vd vr
 
                 OneWay _ ->
-                    -- FIXME: satisfy the compiler, impossible state!
-                    init
+                    -- FIXME: Impossible state / satisfy the compiler. The relevant field is not shown in the user interface.
+                    model
 
-        BookClicked ->
-            Debug.todo "BookClicked"
+        ( BookClicked, UserEdit edit ) ->
+            case edit of
+                OneWay dep ->
+                    case dep of
+                        Ok (Departure d) ->
+                            ConfirmBooking <| "You have booked a one-way flight on " ++ Date.toIsoString d ++ "!"
+
+                        Err _ ->
+                            -- FIXME: Impossible state / satisfy the compiler. The button cannot be clicked if they are errors.
+                            model
+
+                RoundTrip dep ret ->
+                    case ( dep, ret ) of
+                        ( Ok (Departure d), Ok (Return r) ) ->
+                            ConfirmBooking <|
+                                "You have booked a return flight: "
+                                    ++ Date.toIsoString d
+                                    ++ "⇔"
+                                    ++ Date.toIsoString r
+                                    ++ "!"
+
+                        _ ->
+                            -- FIXME: Impossible state / satisfy the compiler. The button cannot be clicked if they are errors.
+                            model
+
+        ( _, _ ) ->
+            -- FIXME: Impossible state / satisfy the compiler. This branch should never trigger.
+            model
 
 
 txtOneWay : String
@@ -147,9 +182,9 @@ txtReturn =
     "return flight"
 
 
-isSelected : String -> Model -> Bool
-isSelected txt model =
-    case model of
+isSelected : String -> UserEdit -> Bool
+isSelected txt edit =
+    case edit of
         OneWay _ ->
             txt == txtOneWay
 
@@ -157,14 +192,14 @@ isSelected txt model =
             txt == txtReturn
 
 
-flightOption : String -> Model -> Html Msg
-flightOption txt model =
-    option [ selected (isSelected txt model) ] [ text txt ]
+flightOption : String -> UserEdit -> Html Msg
+flightOption txt edit =
+    option [ selected (isSelected txt edit) ] [ text txt ]
 
 
 departureValue : Result DepartureErr Departure -> String
-departureValue md =
-    case md of
+departureValue dep =
+    case dep of
         Err (InvalidDepartureDate s) ->
             s
 
@@ -173,8 +208,8 @@ departureValue md =
 
 
 returnValue : Result ReturnErr Return -> String
-returnValue md =
-    case md of
+returnValue ret =
+    case ret of
         Err (InvalidReturnDate s) ->
             s
 
@@ -218,9 +253,9 @@ invalidReturnWarning ret =
             text "Return cannot happen before departure!"
 
 
-viewDateInputs : Model -> Html Msg
-viewDateInputs model =
-    case model of
+viewDateInputs : UserEdit -> Html Msg
+viewDateInputs edit =
+    case edit of
         -- I move away frome the requirements slightly here.
         -- Returning 2 inputs for one way seems kludgy to me.
         OneWay dep ->
@@ -242,9 +277,9 @@ viewDateInputs model =
                 ]
 
 
-anyErrors : Model -> Bool
-anyErrors model =
-    case model of
+anyErrors : UserEdit -> Bool
+anyErrors edit =
+    case edit of
         OneWay (Err _) ->
             True
 
@@ -266,13 +301,19 @@ view model =
     div []
         [ h1 [] [ text "Flight Booker" ]
         , div []
-            [ select [ onInput FlightTypeChanged ]
-                [ flightOption txtOneWay model
-                , flightOption txtReturn model
-                ]
-            ]
-        , viewDateInputs model
-        , div [] [ button [ disabled (anyErrors model), onClick BookClicked ] [ text "Book" ] ]
+            (case model of
+                UserEdit edit ->
+                    [ select [ onInput FlightTypeChanged ]
+                        [ flightOption txtOneWay edit
+                        , flightOption txtReturn edit
+                        ]
+                    , viewDateInputs edit
+                    , div [] [ button [ disabled (anyErrors edit), onClick BookClicked ] [ text "Book" ] ]
+                    ]
+
+                ConfirmBooking str ->
+                    [ text str ]
+            )
         ]
 
 

@@ -30,14 +30,16 @@ suite =
             \_ ->
                 let
                     initR =
-                        RoundTrip
-                            (Ok <| Departure (fromCalendarDate 2023 Jan 1))
-                            (Ok <| Return (fromCalendarDate 2023 Jan 1))
+                        UserEdit <|
+                            RoundTrip
+                                (Ok <| Departure (fromCalendarDate 2023 Jan 1))
+                                (Ok <| Return (fromCalendarDate 2023 Jan 1))
 
                     expected =
-                        RoundTrip
-                            (Ok <| Departure (fromCalendarDate 2023 Jan 1))
-                            (Err <| ReturnIsBeforeDeparture "2022-01-01")
+                        UserEdit <|
+                            RoundTrip
+                                (Ok <| Departure (fromCalendarDate 2023 Jan 1))
+                                (Err <| ReturnIsBeforeDeparture "2022-01-01")
                 in
                 initR
                     |> update (DepartureChanged "2023x")
