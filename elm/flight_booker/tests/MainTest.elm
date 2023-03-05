@@ -47,4 +47,23 @@ suite =
                     |> update (ReturnChanged "2022")
                     |> update (DepartureChanged "2023")
                     |> Expect.equal expected
+        , test "bug2" <|
+            \_ ->
+                let
+                    initR =
+                        UserEdit <|
+                            RoundTrip
+                                (Ok <| Departure (fromCalendarDate 2023 Mar 1))
+                                (Ok <| Return (fromCalendarDate 2023 Mar 1))
+
+                    expected =
+                        UserEdit <|
+                            RoundTrip
+                                (Ok <| Departure (fromCalendarDate 2023 Jan 1))
+                                (Ok <| Return (fromCalendarDate 2023 Feb 1))
+                in
+                initR
+                    |> update (ReturnChanged "2023-02-01")
+                    |> update (DepartureChanged "2023-01-01")
+                    |> Expect.equal expected
         ]
