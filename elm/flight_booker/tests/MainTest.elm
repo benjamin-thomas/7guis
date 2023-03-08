@@ -31,6 +31,7 @@ suite =
                 let
                     initR =
                         UserEdit <|
+                            -- FIXME: broken test
                             RoundTrip
                                 (Ok <| Departure (fromCalendarDate 2023 Jan 1))
                                 (Ok <| Return (fromCalendarDate 2023 Jan 1))

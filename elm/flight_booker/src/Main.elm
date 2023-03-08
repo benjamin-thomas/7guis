@@ -1,8 +1,9 @@
 module Main exposing (..)
 
 import Browser
-import Date exposing (Date, fromCalendarDate, fromIsoString, toIsoString)
-import Html exposing (Html, button, div, h1, input, option, select, text)
+import Date exposing (Date, fromIsoString)
+import Dict exposing (Dict)
+import Html exposing (Html, button, div, h1, input, option, select, span, text)
 import Html.Attributes exposing (disabled, selected, style, value)
 import Html.Events exposing (onClick, onInput)
 import Time exposing (Month(..))
@@ -12,79 +13,100 @@ import Time exposing (Month(..))
 -- MODEL
 
 
-type Departure
-    = Departure Date
+type Flight
+    = OneWay Date
+    | Return Date Date
 
 
-type Return
-    = Return Date
+type FlightType
+    = OneWay_
+    | Return_
 
 
-type DepartureErr
-    = InvalidDepartureDate String
+flightTypes : Dict Int ( FlightType, String )
+flightTypes =
+    Dict.fromList
+        [ ( 0, ( OneWay_, "one-way flight" ) )
+        , ( 1, ( Return_, "return flight" ) )
+        ]
 
 
-type ReturnErr
-    = InvalidReturnDate String
-    | ReturnIsBeforeDeparture String
+type alias Form =
+    { flightType : FlightType
+    , departureDate : String
+    , returnDate : String
+    }
+
+
+type alias FormErrors =
+    { departureDate : String
+    , returnDate : String
+    , returnIsBeforeDeparture : String
+    }
 
 
 type Model
-    = UserEdit UserEdit
-    | ConfirmBooking String
+    = UserEdit Form
+    | ConfirmBooking Flight
 
 
 
 -- VALIDATION
 
 
-validateDepartureString : String -> Result DepartureErr Departure
-validateDepartureString s =
-    fromIsoString s
-        |> Result.mapError (always (InvalidDepartureDate s))
-        |> Result.map Departure
+validate : Form -> Result FormErrors Flight
+validate form =
+    case form.flightType of
+        OneWay_ ->
+            case fromIsoString form.departureDate of
+                Ok dt ->
+                    Ok (OneWay dt)
 
+                Err _ ->
+                    Err (FormErrors "invalid dep" "" "")
 
-validateReturnString : String -> Result ReturnErr Return
-validateReturnString s =
-    fromIsoString s
-        |> Result.mapError (always (InvalidReturnDate s))
-        |> Result.map Return
+        Return_ ->
+            let
+                depRes : Result String Date
+                depRes =
+                    Result.mapError (\_ -> "invalid dep") (fromIsoString form.departureDate)
 
+                retRes : Result String Date
+                retRes =
+                    Result.mapError (\_ -> "invalid ret") (fromIsoString form.returnDate)
+            in
+            case ( depRes, retRes ) of
+                ( Ok dep, Ok ret ) ->
+                    if Date.compare ret dep == LT then
+                        Err (FormErrors "" "" "Return cannot happen before departure!")
 
-validateNotBefore :
-    ( Result DepartureErr Departure, Result ReturnErr Return )
-    -> ( Result DepartureErr Departure, Result ReturnErr Return )
-validateNotBefore ( dep, ret ) =
-    case ( dep, ret ) of
-        ( Ok (Departure d), Ok (Return r) ) ->
-            if Date.compare r d == LT then
-                -- Bad user input, return cannot happen before departure!
-                let
-                    badRet =
-                        Err (ReturnIsBeforeDeparture (toIsoString r))
-                in
-                ( dep, badRet )
+                    else
+                        Ok (Return dep ret)
 
-            else
-                ( dep, ret )
+                ( _, _ ) ->
+                    let
+                        left x =
+                            case x of
+                                Ok _ ->
+                                    ""
 
-        _ ->
-            ( dep, ret )
+                                Err s ->
+                                    s
+                    in
+                    Err (FormErrors (left depRes) (left retRes) "")
 
 
 
 -- UPDATE
 
 
-type UserEdit
-    = OneWay (Result DepartureErr Departure)
-    | RoundTrip (Result DepartureErr Departure) (Result ReturnErr Return)
-
-
 init : Model
 init =
-    UserEdit <| OneWay <| Ok <| Departure <| fromCalendarDate 2023 Mar 1
+    UserEdit
+        { flightType = OneWay_
+        , departureDate = "2023-03-08"
+        , returnDate = ""
+        }
 
 
 type Msg
@@ -97,80 +119,50 @@ type Msg
 update : Msg -> Model -> Model
 update msg model =
     case ( msg, model ) of
-        ( FlightTypeChanged _, UserEdit edit ) ->
-            case edit of
-                OneWay dep ->
-                    let
-                        ret =
-                            dep
-                                |> Result.map (\(Departure d) -> Return d)
-                                |> Result.mapError (\(InvalidDepartureDate d) -> InvalidReturnDate d)
-                    in
-                    UserEdit <| RoundTrip dep ret
+        ( FlightTypeChanged s, UserEdit form ) ->
+            let
+                getFlightType n =
+                    Dict.get n flightTypes
+                        |> Maybe.map Tuple.first
 
-                RoundTrip dep _ ->
-                    UserEdit <| OneWay dep
-
-        ( DepartureChanged s, UserEdit edit ) ->
-            case edit of
-                OneWay _ ->
-                    UserEdit <| OneWay (validateDepartureString s)
-
-                RoundTrip _ ret ->
-                    let
-                        dep : Result DepartureErr Departure
-                        dep =
-                            validateDepartureString s
-
-                        ( vd, vr ) =
-                            validateNotBefore ( dep, ret )
-                    in
-                    UserEdit <| RoundTrip vd vr
-
-        ( ReturnChanged s, UserEdit edit ) ->
-            case edit of
-                RoundTrip dep _ ->
-                    let
-                        ret : Result ReturnErr Return
-                        ret =
-                            validateReturnString s
-
-                        ( vd, vr ) =
-                            validateNotBefore ( dep, ret )
-                    in
-                    UserEdit <| RoundTrip vd vr
-
-                OneWay _ ->
-                    -- FIXME: Impossible state / satisfy the compiler. The relevant field is not shown in the user interface.
+                mft =
+                    String.toInt s
+                        |> Maybe.andThen getFlightType
+            in
+            case mft of
+                Nothing ->
                     model
 
-        ( BookClicked, UserEdit edit ) ->
-            case edit of
-                OneWay dep ->
-                    case dep of
-                        Ok (Departure d) ->
-                            ConfirmBooking <| "You have booked a one-way flight on " ++ Date.toIsoString d ++ "!"
+                Just ft ->
+                    let
+                        rd =
+                            if form.returnDate == "" then
+                                form.departureDate
 
-                        Err _ ->
-                            -- FIXME: Impossible state / satisfy the compiler. The button cannot be clicked if they are errors.
-                            model
+                            else
+                                form.returnDate
+                    in
+                    UserEdit <|
+                        { form | flightType = ft, returnDate = rd }
 
-                RoundTrip dep ret ->
-                    case ( dep, ret ) of
-                        ( Ok (Departure d), Ok (Return r) ) ->
-                            ConfirmBooking <|
-                                "You have booked a return flight: "
-                                    ++ Date.toIsoString d
-                                    ++ "⇔"
-                                    ++ Date.toIsoString r
-                                    ++ "!"
+        ( DepartureChanged s, UserEdit form ) ->
+            UserEdit <|
+                { form | departureDate = s }
 
-                        _ ->
-                            -- FIXME: Impossible state / satisfy the compiler. The button cannot be clicked if they are errors.
-                            model
+        ( ReturnChanged s, UserEdit form ) ->
+            UserEdit <|
+                { form | returnDate = s }
+
+        ( BookClicked, UserEdit form ) ->
+            case validate form of
+                Err _ ->
+                    UserEdit form
+
+                Ok flight ->
+                    ConfirmBooking flight
 
         ( _, _ ) ->
-            -- FIXME: Impossible state / satisfy the compiler. This branch should never trigger.
+            -- Impossible states
             model
 
 
@@ -178,127 +170,82 @@ update msg model =
 -- VIEW
 
 
-txtOneWay : String
-txtOneWay =
-    "one-way flight"
-
-
-txtReturn : String
-txtReturn =
-    "return flight"
-
-
-isSelected : String -> UserEdit -> Bool
-isSelected txt edit =
-    case edit of
-        OneWay _ ->
-            txt == txtOneWay
-
-        RoundTrip _ _ ->
-            txt == txtReturn
-
-
-flightOption : String -> UserEdit -> Html Msg
-flightOption txt edit =
-    option [ selected (isSelected txt edit) ] [ text txt ]
-
-
-departureValue : Result DepartureErr Departure -> String
-departureValue dep =
-    case dep of
-        Err (InvalidDepartureDate s) ->
-            s
-
-        Ok (Departure d) ->
-            toIsoString d
-
-
-returnValue : Result ReturnErr Return -> String
-returnValue ret =
-    case ret of
-        Err (InvalidReturnDate s) ->
-            s
-
-        Err (ReturnIsBeforeDeparture s) ->
-            s
-
-        Ok (Return d) ->
-            toIsoString d
-
-
-errStyle : Result err val -> Html.Attribute msg
-errStyle e =
-    case e of
-        Err _ ->
-            style "background-color" "red"
-
-        Ok _ ->
-            style "" ""
-
-
-invalidDepartureWarning : Result DepartureErr value -> Html msg
-invalidDepartureWarning dep =
-    case dep of
-        Ok _ ->
-            text ""
-
-        Err (InvalidDepartureDate _) ->
-            text "The departure date is not valid!"
-
-
-invalidReturnWarning : Result ReturnErr value -> Html msg
-invalidReturnWarning ret =
-    case ret of
-        Ok _ ->
-            text ""
-
-        Err (InvalidReturnDate _) ->
-            text "The return date is not valid!"
-
-        Err (ReturnIsBeforeDeparture _) ->
-            text "Return cannot happen before departure!"
-
-
-viewDateInputs : UserEdit -> Html Msg
-viewDateInputs edit =
-    case edit of
-        -- I move away from the requirements slightly here.
-        -- Returning 2 inputs for one way seems kludgy to me.
-        OneWay dep ->
-            div []
-                [ input [ errStyle dep, value (departureValue dep), onInput DepartureChanged ] []
-                , invalidDepartureWarning dep
-                ]
-
-        RoundTrip dep ret ->
-            div []
-                [ div []
-                    [ input [ errStyle dep, value (departureValue dep), onInput DepartureChanged ] []
-                    , invalidDepartureWarning dep
-                    ]
-                , div []
-                    [ input [ errStyle ret, value (returnValue ret), onInput ReturnChanged ] []
-                    , invalidReturnWarning ret
-                    ]
-                ]
-
-
-anyErrors : UserEdit -> Bool
-anyErrors edit =
-    case edit of
-        OneWay (Err _) ->
-            True
-
-        RoundTrip (Err _) _ ->
-            True
-
-        RoundTrip _ (Err _) ->
-            True
-
-        OneWay (Ok _) ->
+isSelected : Int -> FlightType -> Bool
+isSelected id ft =
+    case Dict.get id flightTypes of
+        Nothing ->
             False
 
-        RoundTrip (Ok _) (Ok _) ->
+        Just ( ft_, _ ) ->
+            ft == ft_
+
+
+flightOption : Int -> String -> Form -> Html Msg
+flightOption id txt form =
+    option
+        [ selected (isSelected id form.flightType)
+        , value (String.fromInt id)
+        ]
+        [ text txt ]
+
+
+viewDateInputs : Form -> Result FormErrors Flight -> Html Msg
+viewDateInputs form validation =
+    let
+        showErr field =
+            span []
+                [ case validation of
+                    Err fe ->
+                        text (field fe)
+
+                    Ok _ ->
+                        text ""
+                ]
+
+        errStyle e =
+            case validation of
+                Err fe ->
+                    if String.length (e fe) > 0 then
+                        style "background-color" "red"
+
+                    else
+                        style "" ""
+
+                Ok _ ->
+                    style "" ""
+    in
+    case form.flightType of
+        -- I move away from the requirements slightly here.
+        -- Returning 2 inputs for one way seems kludgy to me.
+        OneWay_ ->
+            div []
+                [ input [ errStyle .departureDate, value form.departureDate, onInput DepartureChanged ] []
+                , showErr .departureDate
+                ]
+
+        Return_ ->
+            div []
+                [ div []
+                    [ input [ errStyle .departureDate, value form.departureDate, onInput DepartureChanged ] []
+                    , showErr .departureDate
+                    ]
+                , div []
+                    [ input [ errStyle .returnDate, value form.returnDate, onInput ReturnChanged ] []
+                    , showErr .returnDate
+                    ]
+                , div [ errStyle .returnIsBeforeDeparture ]
+                    [ showErr .returnIsBeforeDeparture
+                    ]
+                ]
+
+
+isErr : Result error value -> Bool
+isErr validation =
+    case validation of
+        Err _ ->
+            True
+
+        Ok _ ->
             False
 
 
@@ -308,17 +255,35 @@ view model =
         [ h1 [] [ text "Flight Booker" ]
         , div []
             (case model of
-                UserEdit edit ->
+                UserEdit form ->
+                    let
+                        validation =
+                            validate form
+                    in
                     [ select [ onInput FlightTypeChanged ]
-                        [ flightOption txtOneWay edit
-                        , flightOption txtReturn edit
-                        ]
-                    , viewDateInputs edit
-                    , div [] [ button [ disabled (anyErrors edit), onClick BookClicked ] [ text "Book" ] ]
+                        (Dict.toList flightTypes
+                            |> List.map
+                                (\( id, ( _, str ) ) ->
+                                    flightOption id str form
+                                )
+                        )
+                    , viewDateInputs form validation
+                    , div [] [ button [ disabled (isErr validation), onClick BookClicked ] [ text "Book" ] ]
                     ]
 
-                ConfirmBooking str ->
-                    [ text str ]
+                ConfirmBooking flight ->
+                    [ case flight of
+                        OneWay dep ->
+                            text <| "You have booked a one-way flight on " ++ Date.toIsoString dep ++ "!"
+
+                        Return dep ret ->
+                            text <|
+                                "You have booked a return flight: "
+                                    ++ Date.toIsoString dep
+                                    ++ "⇔"
+                                    ++ Date.toIsoString ret
+                                    ++ "!"
+                    ]
             )
         ]
 
