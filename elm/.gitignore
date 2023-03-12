@@ -2,3 +2,6 @@ elm-stuff/
 
 # elm-live generated
 index.html
+
+# custom builds
+build/
