@@ -8,13 +8,21 @@ body {
 }
 
 #widget {
-    display: flex;
     border: 1px solid #CCC;
     border-radius: 5px;
+    padding-bottom: 10px;
 }
 
-#widget>div {
+.lr {
+    display: flex;
+}
+
+.lr>div {
     margin: 10px;
+}
+
+.buttons button {
+    margin-left: 10px;
 }
 
 #widget select,
