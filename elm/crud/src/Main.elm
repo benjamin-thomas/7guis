@@ -13,7 +13,6 @@ import Json.Encode
 {-
    elm-live --host=0.0.0.0 --start-page=index2.html src/Main.elm -- --output=build/main.js  --debug
    echo main.css | entr touch src/Main.elm
-   json-server --watch db.json
    json-server --host=$(hostname -I | awk '{print $1}') --watch db.json
 
 
@@ -45,20 +44,19 @@ personToForm p =
 type Model
     = Loading
     | Errored String
-    | Loaded (List Person) UserSelection
-    | Editing (List Person) Form
+    | Loaded (List Person) UserSelection Form
 
 
 type Msg
     = GotUsers (Result Http.Error (List Person))
     | SelectedPerson String
-    | EnterEditMode
     | ClickedOnCreate
     | ClickedOnUpdate
     | ClickedOnDelete
-    | ClickedOutside
     | NOOP
-    | UserPosted (Result Http.Error ())
+    | UserCreated (Result Http.Error ())
+    | UserUpdated (Result Http.Error ())
+    | UserDeleted (Result Http.Error ())
     | ChangedFirstName String
     | ChangedLastName String
 
@@ -93,7 +91,33 @@ postUsers f =
     Http.post
         { url = "http://192.168.52.100:3000/users"
         , body = buildBody f
-        , expect = Http.expectWhatever UserPosted
+        , expect = Http.expectWhatever UserCreated
+        }
+
+
+deleteUser : Int -> Cmd Msg
+deleteUser id =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = "http://192.168.52.100:3000/users/" ++ String.fromInt id
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever UserUpdated
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+putUser : Int -> Form -> Cmd Msg
+putUser id form =
+    Http.request
+        { method = "PUT"
+        , headers = []
+        , url = "http://192.168.52.100:3000/users/" ++ String.fromInt id
+        , body = buildBody form
+        , expect = Http.expectWhatever UserDeleted
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 
@@ -102,11 +126,18 @@ init _ =
     ( Loading, getUsers )
 
 
+initForm : Maybe Person -> { firstName : String, lastName : String }
+initForm selected =
+    selected
+        |> Maybe.map personToForm
+        |> Maybe.withDefault { firstName = "", lastName = "" }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( model, msg ) of
         ( Loading, GotUsers (Ok users) ) ->
-            ( Loaded users Nothing, Cmd.none )
+            ( Loaded users Nothing (initForm Nothing), Cmd.none )
 
         ( Loading, GotUsers (Err error) ) ->
             let
@@ -129,7 +160,7 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
-        ( Loaded people _, SelectedPerson s ) ->
+        ( Loaded people _ _, SelectedPerson s ) ->
             let
                 filterById n =
                     List.filter (\p -> p.id == n) people
@@ -140,53 +171,62 @@ update msg model =
                         |> Maybe.map filterById
                         |> Maybe.andThen List.head
             in
-            ( Loaded people maybePerson, Cmd.none )
+            ( Loaded people maybePerson (initForm maybePerson), Cmd.none )
 
-        ( Loaded people _, ClickedOutside ) ->
-            ( Loaded people Nothing, Cmd.none )
-
-        ( Loaded people selected, EnterEditMode ) ->
-            let
-                initForm =
-                    selected
-                        |> Maybe.map personToForm
-                        |> Maybe.withDefault { firstName = "", lastName = "" }
-            in
-            ( Editing people initForm, Cmd.none )
-
-        ( Loaded _ _, ClickedOnCreate ) ->
-            ( model, Cmd.none )
-
-        {-
-           FIXME: Editing should be:
-
-               Editing (List Person) [maybe selected, need the personID] Form
-        -}
-        ( Editing _ f, ClickedOnUpdate ) ->
+        ( Loaded _ _ f, ClickedOnCreate ) ->
             if f.firstName /= "" && f.lastName /= "" then
                 ( model, postUsers f )
 
             else
                 ( model, Cmd.none )
 
-        ( Editing _ _, UserPosted res ) ->
+        ( Loaded _ _ _, UserCreated res ) ->
             case res of
-                Err _ ->
-                    Debug.todo "display error message"
-
                 Ok () ->
                     ( Loading, getUsers )
 
-        ( Editing people form, ChangedFirstName s ) ->
-            ( Editing people { form | firstName = s }, Cmd.none )
+                Err _ ->
+                    Debug.todo "display error message"
 
-        ( Editing people form, ChangedLastName s ) ->
-            ( Editing people { form | lastName = s }, Cmd.none )
+        ( Loaded _ _ _, UserUpdated res ) ->
+            case res of
+                Ok () ->
+                    ( Loading, getUsers )
 
-        ( Loaded _ _, ClickedOnDelete ) ->
-            ( model, Cmd.none )
+                Err _ ->
+                    Debug.todo "display error message"
 
-        ( Loaded _ _, NOOP ) ->
+        ( Loaded _ _ _, UserDeleted res ) ->
+            case res of
+                Ok () ->
+                    ( Loading, getUsers )
+
+                Err _ ->
+                    Debug.todo "display error message"
+
+        ( Loaded people maybeSelected form, ChangedFirstName s ) ->
+            ( Loaded people maybeSelected { form | firstName = s }, Cmd.none )
+
+        ( Loaded people maybeSelected form, ChangedLastName s ) ->
+            ( Loaded people maybeSelected { form | lastName = s }, Cmd.none )
+
+        ( Loaded _ maybeSelected form, ClickedOnUpdate ) ->
+            case maybeSelected of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just person ->
+                    ( model, putUser person.id form )
+
+        ( Loaded _ maybeSelected _, ClickedOnDelete ) ->
+            case maybeSelected of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just person ->
+                    ( model, deleteUser person.id )
+
+        ( Loaded _ _ _, NOOP ) ->
             ( model, Cmd.none )
 
         _ ->
@@ -218,17 +258,9 @@ type InputDataSource
     | UserEdit Form
 
 
-viewPeople : List Person -> InputDataSource -> Bool -> Html Msg
-viewPeople people inputDataSource disableSelectMenu =
+viewPeople : List Person -> UserSelection -> Form -> Html Msg
+viewPeople people _ form =
     let
-        valueFor f =
-            case inputDataSource of
-                UserSelect maybeSelected ->
-                    maybeSelected |> Maybe.map (personToForm >> f) |> Maybe.withDefault ""
-
-                UserEdit form ->
-                    f form
-
         left : Html Msg
         left =
             H.div []
@@ -236,10 +268,9 @@ viewPeople people inputDataSource disableSelectMenu =
                     [ H.label [] [ H.text "Filter prefix:" ]
                     , H.input [ A.id "filter" ] []
                     ]
-                , H.div [ A.class "listbox spacer" ]
+                , H.div [ A.class "listbox spacer", onClickStop NOOP ]
                     [ H.select
                         [ A.size (List.length people)
-                        , A.disabled disableSelectMenu
                         , E.onInput SelectedPerson
                         , onClickStop NOOP
                         ]
@@ -250,19 +281,19 @@ viewPeople people inputDataSource disableSelectMenu =
         right : Html Msg
         right =
             H.div
-                [ A.id "new-person", E.onClick EnterEditMode ]
+                [ A.id "new-person" ]
                 [ H.div [ A.class "spacer" ]
                     [ H.label [] [ H.text "Name:" ]
-                    , H.input [ A.value <| valueFor .firstName, E.onInput ChangedFirstName ] []
+                    , H.input [ A.value form.firstName, E.onInput ChangedFirstName ] []
                     ]
                 , H.div []
                     [ H.label [] [ H.text "Surname:" ]
-                    , H.input [ A.value <| valueFor .lastName, E.onInput ChangedLastName ] []
+                    , H.input [ A.value form.lastName, E.onInput ChangedLastName ] []
                     ]
                 ]
     in
     H.div [ A.class "container" ]
-        [ H.div [ A.id "widget", E.onClick ClickedOutside ]
+        [ H.div [ A.id "widget" ]
             [ H.div [ A.class "lr" ] [ left, right ]
             , H.div [ A.class "buttons" ]
                 [ H.button [ onClickStop ClickedOnCreate ] [ H.text "Create" ]
@@ -280,11 +311,8 @@ view model =
             Loading ->
                 H.text "Loading..."
 
-            Loaded people maybeSelected ->
-                viewPeople people (UserSelect maybeSelected) False
-
-            Editing people form ->
-                viewPeople people (UserEdit form) True
+            Loaded people maybeSelected f ->
+                viewPeople people maybeSelected f
 
             Errored errMsg ->
                 H.text errMsg
