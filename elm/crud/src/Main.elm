@@ -36,6 +36,10 @@ type alias Form =
     }
 
 
+type Filter
+    = Filter String
+
+
 personToForm : Person -> Form
 personToForm p =
     { firstName = p.firstName, lastName = p.lastName }
@@ -44,7 +48,7 @@ personToForm p =
 type Model
     = Loading
     | Errored String
-    | Loaded (List Person) UserSelection Form
+    | Loaded (List Person) UserSelection Form Filter
 
 
 type Msg
@@ -58,6 +62,7 @@ type Msg
     | UserDeleted (Result Http.Error ())
     | ChangedFirstName String
     | ChangedLastName String
+    | FilterChanged String
 
 
 personDecoder : Decoder Person
@@ -136,7 +141,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( model, msg ) of
         ( Loading, GotUsers (Ok users) ) ->
-            ( Loaded users Nothing (initForm Nothing), Cmd.none )
+            ( Loaded users Nothing (initForm Nothing) (Filter ""), Cmd.none )
 
         ( Loading, GotUsers (Err error) ) ->
             let
@@ -159,7 +164,7 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
-        ( Loaded people _ _, SelectedPerson s ) ->
+        ( Loaded people _ _ filter, SelectedPerson s ) ->
             let
                 filterById n =
                     List.filter (\p -> p.id == n) people
@@ -170,16 +175,16 @@ update msg model =
                         |> Maybe.map filterById
                         |> Maybe.andThen List.head
             in
-            ( Loaded people maybePerson (initForm maybePerson), Cmd.none )
+            ( Loaded people maybePerson (initForm maybePerson) filter, Cmd.none )
 
-        ( Loaded _ _ f, ClickedOnCreate ) ->
+        ( Loaded _ _ f _, ClickedOnCreate ) ->
             if f.firstName /= "" && f.lastName /= "" then
                 ( model, postUsers f )
 
             else
                 ( model, Cmd.none )
 
-        ( Loaded _ _ _, UserCreated res ) ->
+        ( Loaded _ _ _ _, UserCreated res ) ->
             case res of
                 Ok () ->
                     ( Loading, getUsers )
@@ -187,7 +192,7 @@ update msg model =
                 Err _ ->
                     Debug.todo "display error message"
 
-        ( Loaded _ _ _, UserUpdated res ) ->
+        ( Loaded _ _ _ _, UserUpdated res ) ->
             case res of
                 Ok () ->
                     ( Loading, getUsers )
@@ -195,7 +200,7 @@ update msg model =
                 Err _ ->
                     Debug.todo "display error message"
 
-        ( Loaded _ _ _, UserDeleted res ) ->
+        ( Loaded _ _ _ _, UserDeleted res ) ->
             case res of
                 Ok () ->
                     ( Loading, getUsers )
@@ -203,13 +208,13 @@ update msg model =
                 Err _ ->
                     Debug.todo "display error message"
 
-        ( Loaded people maybeSelected form, ChangedFirstName s ) ->
-            ( Loaded people maybeSelected { form | firstName = s }, Cmd.none )
+        ( Loaded people maybeSelected form filter, ChangedFirstName s ) ->
+            ( Loaded people maybeSelected { form | firstName = s } filter, Cmd.none )
 
-        ( Loaded people maybeSelected form, ChangedLastName s ) ->
-            ( Loaded people maybeSelected { form | lastName = s }, Cmd.none )
+        ( Loaded people maybeSelected form filter, ChangedLastName s ) ->
+            ( Loaded people maybeSelected { form | lastName = s } filter, Cmd.none )
 
-        ( Loaded _ maybeSelected form, ClickedOnUpdate ) ->
+        ( Loaded _ maybeSelected form _, ClickedOnUpdate ) ->
             case maybeSelected of
                 Nothing ->
                     ( model, Cmd.none )
@@ -217,13 +222,16 @@ update msg model =
                 Just person ->
                     ( model, putUser person.id form )
 
-        ( Loaded _ maybeSelected _, ClickedOnDelete ) ->
+        ( Loaded _ maybeSelected _ _, ClickedOnDelete ) ->
             case maybeSelected of
                 Nothing ->
                     ( model, Cmd.none )
 
                 Just person ->
                     ( model, deleteUser person.id )
+
+        ( Loaded people maybeSelected form _, FilterChanged s ) ->
+            ( Loaded people maybeSelected form (Filter s), Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -254,22 +262,37 @@ type InputDataSource
     | UserEdit Form
 
 
-viewPeople : List Person -> UserSelection -> Form -> Html Msg
-viewPeople people _ form =
+viewPeople : List Person -> UserSelection -> Form -> Filter -> Html Msg
+viewPeople people _ form (Filter filter) =
     let
+        byFilter : Person -> Bool
+        byFilter p =
+            let
+                containsLower a b =
+                    String.contains (String.toLower a) (String.toLower b)
+            in
+            containsLower filter p.firstName
+                || containsLower filter p.lastName
+
         left : Html Msg
         left =
             H.div []
                 [ H.div []
                     [ H.label [] [ H.text "Filter prefix:" ]
-                    , H.input [ A.id "filter" ] []
+                    , H.input
+                        [ A.id "filter"
+                        , A.value filter
+                        , A.autocomplete False
+                        , E.onInput FilterChanged
+                        ]
+                        []
                     ]
                 , H.div [ A.class "listbox spacer" ]
                     [ H.select
                         [ A.size (List.length people)
                         , E.onInput SelectedPerson
                         ]
-                        (List.map personOption people)
+                        (List.map personOption (people |> List.filter byFilter))
                     ]
                 ]
 
@@ -306,12 +329,13 @@ view model =
             Loading ->
                 H.text "Loading..."
 
-            Loaded people maybeSelected f ->
-                viewPeople people maybeSelected f
+            Loaded people maybeSelected form filter ->
+                viewPeople people maybeSelected form filter
 
             Errored errMsg ->
                 H.text errMsg
-        , H.pre [] [ H.text (Debug.toString model) ]
+
+        -- , H.pre [] [ H.text (Debug.toString model) ]
         ]
 
 
