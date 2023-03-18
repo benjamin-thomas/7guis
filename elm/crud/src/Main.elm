@@ -53,7 +53,6 @@ type Msg
     | ClickedOnCreate
     | ClickedOnUpdate
     | ClickedOnDelete
-    | NOOP
     | UserCreated (Result Http.Error ())
     | UserUpdated (Result Http.Error ())
     | UserDeleted (Result Http.Error ())
@@ -226,9 +225,6 @@ update msg model =
                 Just person ->
                     ( model, deleteUser person.id )
 
-        ( Loaded _ _ _, NOOP ) ->
-            ( model, Cmd.none )
-
         _ ->
             ( model, Cmd.none )
 
@@ -268,11 +264,10 @@ viewPeople people _ form =
                     [ H.label [] [ H.text "Filter prefix:" ]
                     , H.input [ A.id "filter" ] []
                     ]
-                , H.div [ A.class "listbox spacer", onClickStop NOOP ]
+                , H.div [ A.class "listbox spacer" ]
                     [ H.select
                         [ A.size (List.length people)
                         , E.onInput SelectedPerson
-                        , onClickStop NOOP
                         ]
                         (List.map personOption people)
                     ]
