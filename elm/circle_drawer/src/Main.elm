@@ -46,6 +46,7 @@ init =
 type Msg
     = MouseMove MousePos
     | SelectOrAddCircle
+    | MouseRightClicked
 
 
 isIntersect : MousePos -> Circle -> Bool
@@ -121,6 +122,13 @@ update msg model =
             in
             newModel
 
+        MouseRightClicked ->
+            let
+                _ =
+                    Debug.log "MouseRightClicked" "triggered!"
+            in
+            model
+
 
 decodeMousePos : D.Decoder MousePos
 decodeMousePos =
@@ -129,16 +137,34 @@ decodeMousePos =
         (D.at [ "offsetY" ] D.int)
 
 
+mouseRightClickDecoder : D.Decoder Msg
+mouseRightClickDecoder =
+    D.field "button" D.int
+        |> D.andThen
+            (\n ->
+                if n == 2 then
+                    D.succeed MouseRightClicked
+
+                else
+                    D.fail <| "Other: " ++ String.fromInt n
+            )
+
+
+alwaysPreventDefault : msg -> ( msg, Bool )
+alwaysPreventDefault msg =
+    ( msg, True )
+
+
 view : Model -> Html Msg
 view model =
     let
-        viewCircle : Circle -> Svg msg
+        viewCircle : Circle -> Svg Msg
         viewCircle c =
             circle
                 [ cx (String.fromInt c.cx)
                 , cy (String.fromInt c.cy)
                 , r (String.fromInt c.r)
-                , stroke c.stroke -- HERE
+                , stroke c.stroke
                 , fill
                     (if model.selected == Just c then
                         "orange"
@@ -146,12 +172,15 @@ view model =
                      else
                         "transparent"
                     )
+                , E.preventDefaultOn "contextmenu" (D.map alwaysPreventDefault mouseRightClickDecoder)
                 ]
                 []
     in
     H.div
         []
-        [ H.h1 [] [ H.text "Circle Drawer" ]
+        [ H.h1
+            []
+            [ H.text "Circle Drawer" ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
             [ H.text <|
                 Debug.toString model.mousePos
