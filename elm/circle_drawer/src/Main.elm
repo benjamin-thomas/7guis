@@ -26,20 +26,20 @@ type alias Circle =
     , cy : Int
     , r : Int
     , stroke : String
-    , fill : String
     }
 
 
 type alias Model =
-    { mousePos : MousePos, circles : List Circle }
+    { mousePos : MousePos, circles : List Circle, selected : Maybe Circle }
 
 
 init : Model
 init =
     { mousePos = { x = 0, y = 0 }
     , circles =
-        [ { cx = 50, cy = 50, r = 40, stroke = "black", fill = "transparent" }
+        [ { cx = 50, cy = 50, r = 40, stroke = "black" }
         ]
+    , selected = Nothing
     }
 
 
@@ -106,17 +106,18 @@ update msg model =
                                     , cy = model.mousePos.y
                                     , r = 40
                                     , stroke = "black"
-                                    , fill = "transparent"
                                     }
                             in
-                            { model | circles = newCircle :: model.circles }
+                            { model
+                                | circles = newCircle :: model.circles
+                                , selected = Nothing
+                            }
 
-                        Just circle ->
-                            let
-                                newCircle =
-                                    { circle | fill = "orange" }
-                            in
-                            { model | circles = search.before ++ newCircle :: search.after }
+                        Just newCircle ->
+                            { model
+                                | circles = search.before ++ newCircle :: search.after
+                                , selected = Just newCircle
+                            }
             in
             newModel
 
@@ -137,8 +138,14 @@ view model =
                 [ cx (String.fromInt c.cx)
                 , cy (String.fromInt c.cy)
                 , r (String.fromInt c.r)
-                , stroke c.stroke
-                , fill c.fill
+                , stroke c.stroke -- HERE
+                , fill
+                    (if model.selected == Just c then
+                        "orange"
+
+                     else
+                        "transparent"
+                    )
                 ]
                 []
     in
@@ -148,6 +155,8 @@ view model =
         , H.pre [ A.style "white-space" "pre-wrap" ]
             [ H.text <|
                 Debug.toString model.mousePos
+                    ++ " "
+                    ++ Debug.toString model.selected
             ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
             [ H.text <| String.join "\n" <| List.map (\c -> Debug.toString c) model.circles ]
