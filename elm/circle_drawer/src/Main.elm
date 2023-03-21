@@ -31,7 +31,7 @@ type alias Circle =
 
 
 type alias Model =
-    { mousePos : MousePos, circles : List Circle, interSect : Bool }
+    { mousePos : MousePos, circles : List Circle }
 
 
 init : Model
@@ -40,7 +40,6 @@ init =
     , circles =
         [ { cx = 50, cy = 50, r = 40, stroke = "black", fill = "transparent" }
         ]
-    , interSect = False
     }
 
 
@@ -87,17 +86,7 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         MouseMove pos ->
-            let
-                dx =
-                    50 - pos.x |> toFloat
-
-                dy =
-                    50 - pos.y |> toFloat
-
-                dist =
-                    sqrt (dx * dx + dy * dy)
-            in
-            { model | mousePos = pos, interSect = dist < toFloat 40 }
+            { model | mousePos = pos }
 
         SelectOrAddCircle ->
             let
@@ -159,8 +148,6 @@ view model =
         , H.pre [ A.style "white-space" "pre-wrap" ]
             [ H.text <|
                 Debug.toString model.mousePos
-                    ++ " "
-                    ++ Debug.toString model.interSect
             ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
             [ H.text <| String.join "\n" <| List.map (\c -> Debug.toString c) model.circles ]
