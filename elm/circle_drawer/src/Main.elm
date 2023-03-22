@@ -31,21 +31,28 @@ type alias Circle =
     }
 
 
+type alias State =
+    { mousePos : MousePos
+    , circles : List Circle
+    , selected : Maybe ( Circle, MousePos )
+    , isMenuOpen : Bool
+    }
+
+
 type alias Model =
-    { mousePos : MousePos, circles : List Circle, selected : Maybe ( Circle, MousePos ), isMenuOpen : Bool }
+    { curr : State, prev : List State, next : List State }
 
 
 init : Model
 init =
-    { mousePos = { x = 0, y = 0, absoluteX = 0, absoluteY = 0 }
-    , circles =
-        [ { cx = 50, cy = 50, r = 40, stroke = "black" }
-        ]
-
-    -- , selected = Just ( { cx = 50, cy = 50, r = 40, stroke = "black" }, { clientX = 797, clientY = 180, x = 45, y = 43 } )
-    -- , isMenuOpen = True
-    , selected = Nothing
-    , isMenuOpen = False
+    { curr =
+        { mousePos = { x = 0, y = 0, absoluteX = 0, absoluteY = 0 }
+        , circles = []
+        , selected = Nothing
+        , isMenuOpen = False
+        }
+    , prev = []
+    , next = []
     }
 
 
@@ -54,6 +61,8 @@ type Msg
     | SelectOrAddCircle
     | MouseRightClicked
     | RadiusChanged String
+    | Undo
+    | Redo
 
 
 isIntersect : MousePos -> Circle -> Bool
@@ -92,17 +101,21 @@ findCircle pos lst =
 
 update : Msg -> Model -> Model
 update msg model =
+    let
+        curr =
+            model.curr
+    in
     case msg of
         MouseMove pos ->
-            { model | mousePos = pos }
+            { model | curr = { curr | mousePos = pos } }
 
         SelectOrAddCircle ->
             let
                 pos =
-                    model.mousePos
+                    curr.mousePos
 
                 search =
-                    findCircle pos model.circles
+                    findCircle pos curr.circles
 
                 withSelectedOrWithNewCircle =
                     case search.found of
@@ -110,34 +123,34 @@ update msg model =
                             let
                                 newCircle : Circle
                                 newCircle =
-                                    { cx = model.mousePos.x
-                                    , cy = model.mousePos.y
+                                    { cx = curr.mousePos.x
+                                    , cy = curr.mousePos.y
                                     , r = 40
                                     , stroke = "black"
                                     }
                             in
-                            { model
-                                | circles = newCircle :: model.circles
+                            { curr
+                                | circles = newCircle :: curr.circles
                                 , selected = Nothing
                             }
 
                         Just newCircle ->
-                            { model
+                            { curr
                                 | circles = search.before ++ newCircle :: search.after
-                                , selected = Just ( newCircle, model.mousePos )
+                                , selected = Just ( newCircle, curr.mousePos )
                             }
             in
-            if model.isMenuOpen then
-                { model | isMenuOpen = False }
+            if curr.isMenuOpen then
+                { model | curr = { curr | isMenuOpen = False }, prev = model.curr :: model.prev }
 
             else
-                withSelectedOrWithNewCircle
+                { model | curr = withSelectedOrWithNewCircle, prev = model.curr :: model.prev }
 
         MouseRightClicked ->
-            { model | isMenuOpen = True }
+            { model | curr = { curr | isMenuOpen = True } }
 
         RadiusChanged s ->
-            case ( model.isMenuOpen, model.selected ) of
+            case ( curr.isMenuOpen, curr.selected ) of
                 ( True, Just ( circle, pos ) ) ->
                     let
                         newCircle =
@@ -147,7 +160,7 @@ update msg model =
                                 |> Maybe.withDefault circle
 
                         newCircles =
-                            model.circles
+                            curr.circles
                                 |> List.map
                                     (\c ->
                                         if c == circle then
@@ -157,10 +170,26 @@ update msg model =
                                             c
                                     )
                     in
-                    { model | selected = Just ( newCircle, pos ), circles = newCircles }
+                    { model | curr = { curr | selected = Just ( newCircle, pos ), circles = newCircles } }
 
                 _ ->
                     model
+
+        Undo ->
+            case model.prev of
+                [] ->
+                    model
+
+                prevState :: prevHistory ->
+                    { model | curr = prevState, prev = prevHistory, next = model.curr :: model.next }
+
+        Redo ->
+            case model.next of
+                [] ->
+                    model
+
+                nextState :: nextHistory ->
+                    { model | curr = nextState, next = nextHistory, prev = model.curr :: model.prev }
 
 
 decodeMousePos : D.Decoder MousePos
@@ -231,8 +260,11 @@ showMenu isMenuOpen selected =
 view : Model -> Html Msg
 view model =
     let
+        state =
+            model.curr
+
         selectedCircle =
-            model.selected |> Maybe.map Tuple.first
+            state.selected |> Maybe.map Tuple.first
 
         viewCircle : Circle -> Svg Msg
         viewCircle c =
@@ -259,16 +291,18 @@ view model =
             [ H.text "Circle Drawer" ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
             [ H.text <|
-                Debug.toString model.mousePos
+                Debug.toString state.mousePos
                     ++ " "
-                    ++ Debug.toString model.selected
+                    ++ Debug.toString state.selected
                     ++ " "
-                    ++ Debug.toString model.isMenuOpen
+                    ++ Debug.toString state.isMenuOpen
             ]
-        , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| String.join "\n" <| List.map (\c -> Debug.toString c) model.circles ]
         , H.div [ A.style "text-align" "center" ]
-            [ svg
+            [ H.div []
+                [ H.button [ E.onClick Undo ] [ H.text "Undo" ]
+                , H.button [ E.onClick Redo ] [ H.text "Redo" ]
+                ]
+            , svg
                 [ width "400px"
                 , height "400px"
                 , A.style "border" "1px solid red"
@@ -278,8 +312,16 @@ view model =
                 -- Disables doubleclick behaviour on Edge (a search menu pops up)
                 , A.style "user-select" "none"
                 ]
-                (List.map viewCircle model.circles)
-            , showMenu model.isMenuOpen model.selected
+                (List.map viewCircle state.circles)
+            , showMenu state.isMenuOpen state.selected
+            ]
+        , H.pre [ A.style "white-space" "pre-wrap" ]
+            [ H.text <| String.join "\n" <| List.map (\c -> Debug.toString c) state.circles ]
+        , H.pre [ A.style "white-space" "pre-wrap" ]
+            [ H.text <| "PREV: " ++ (String.join "\n" <| List.map (\c -> Debug.toString c) model.prev)
+            ]
+        , H.pre [ A.style "white-space" "pre-wrap" ]
+            [ H.text <| "NEXT " ++ (String.join "\n" <| List.map (\c -> Debug.toString c) model.next)
             ]
         ]
 
