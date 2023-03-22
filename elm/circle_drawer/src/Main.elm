@@ -274,6 +274,9 @@ view model =
                 , A.style "border" "1px solid red"
                 , E.on "mousemove" (D.map MouseMove decodeMousePos)
                 , E.onClick SelectOrAddCircle
+
+                -- Disables doubleclick behaviour on Edge (a search menu pops up)
+                , A.style "user-select" "none"
                 ]
                 (List.map viewCircle model.circles)
             , showMenu model.isMenuOpen model.selected
