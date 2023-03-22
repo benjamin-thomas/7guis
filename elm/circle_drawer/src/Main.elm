@@ -50,6 +50,10 @@ init =
         , circles = []
         , selected = Nothing
         , isMenuOpen = False
+
+        -- , circles = [ { cx = 239, cy = 205, r = 40, stroke = "black" } ]
+        -- , selected = Just ( { cx = 239, cy = 205, r = 40, stroke = "black" }, { absoluteX = 995, absoluteY = 347, x = 235, y = 217 } )
+        -- , isMenuOpen = True
         }
     , prev = []
     , next = []
@@ -61,6 +65,7 @@ type Msg
     | SelectOrAddCircle
     | MouseRightClicked
     | RadiusChanged String
+    | Save
     | Undo
     | Redo
 
@@ -134,14 +139,15 @@ update msg model =
                                 , selected = Nothing
                             }
 
-                        Just newCircle ->
+                        Just foundCircle ->
                             { curr
-                                | circles = search.before ++ newCircle :: search.after
-                                , selected = Just ( newCircle, curr.mousePos )
+                                | circles = search.before ++ foundCircle :: search.after
+                                , selected = Just ( foundCircle, curr.mousePos )
                             }
             in
+            -- FIXME: this branching logic is wrong. I should only save history if newCircle will actually be rendered
             if curr.isMenuOpen then
-                { model | curr = { curr | isMenuOpen = False }, prev = model.curr :: model.prev }
+                { model | curr = { curr | isMenuOpen = False }, prev = { curr | isMenuOpen = False } :: model.prev }
 
             else
                 { model | curr = withSelectedOrWithNewCircle, prev = model.curr :: model.prev }
@@ -170,11 +176,32 @@ update msg model =
                                             c
                                     )
                     in
-                    { model | curr = { curr | selected = Just ( newCircle, pos ), circles = newCircles } }
+                    { model
+                        | curr =
+                            { curr
+                                | selected = Just ( newCircle, pos )
+                                , circles = newCircles
+                            }
+
+                        -- , prev = { curr | isMenuOpen = False } :: model.prev
+                    }
 
                 _ ->
                     model
 
+        Save ->
+            model
+
+        -- let
+        --     curr_ : State
+        --     curr_ =
+        --         model.curr
+        --     curr__ =
+        --         { curr_ | isMenuOpen = False }
+        --     _ =
+        --         Debug.log "cur_" curr_
+        -- in
+        -- { model | prev = curr__ :: model.prev }
         Undo ->
             case model.prev of
                 [] ->
@@ -219,6 +246,12 @@ alwaysPreventDefault msg =
     ( msg, True )
 
 
+
+-- onChange : (String -> msg) -> H.Attribute msg
+-- onChange tagger =
+--     E.on "change" (D.map tagger E.targetValue)
+
+
 showMenu : Bool -> Maybe ( Circle, MousePos ) -> Html Msg
 showMenu isMenuOpen selected =
     case ( isMenuOpen, selected ) of
@@ -248,6 +281,7 @@ showMenu isMenuOpen selected =
                         , A.max "100"
                         , A.value (String.fromInt circle.r)
                         , E.onInput RadiusChanged
+                        , E.onBlur Save
                         ]
                         []
                     ]
@@ -316,12 +350,12 @@ view model =
             , showMenu state.isMenuOpen state.selected
             ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| String.join "\n" <| List.map (\c -> Debug.toString c) state.circles ]
+            [ H.text <| "CIRCLES:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) state.circles) ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| "PREV: " ++ (String.join "\n" <| List.map (\c -> Debug.toString c) model.prev)
+            [ H.text <| "PREV:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.prev)
             ]
         , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| "NEXT " ++ (String.join "\n" <| List.map (\c -> Debug.toString c) model.next)
+            [ H.text <| "NEXT\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.next)
             ]
         ]
 
