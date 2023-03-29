@@ -65,6 +65,7 @@ type Msg
     | SelectOrAddCircle
     | MouseRightClicked
     | RadiusChanged String
+    | CloseMenuAndUnselect
     | Save
     | Undo
     | Redo
@@ -143,14 +144,13 @@ update msg model =
                             { curr
                                 | circles = search.before ++ foundCircle :: search.after
                                 , selected = Just ( foundCircle, curr.mousePos )
+                                , isMenuOpen = False
                             }
             in
-            -- FIXME: this branching logic is wrong. I should only save history if newCircle will actually be rendered
-            if curr.isMenuOpen then
-                { model | curr = { curr | isMenuOpen = False }, prev = { curr | isMenuOpen = False } :: model.prev }
-
-            else
-                { model | curr = withSelectedOrWithNewCircle, prev = model.curr :: model.prev }
+            { model
+                | curr = withSelectedOrWithNewCircle
+                , prev = { curr | isMenuOpen = False } :: model.prev
+            }
 
         MouseRightClicked ->
             { model | curr = { curr | isMenuOpen = True } }
@@ -188,6 +188,9 @@ update msg model =
 
                 _ ->
                     model
+
+        CloseMenuAndUnselect ->
+            { model | curr = { curr | isMenuOpen = False, selected = Nothing } }
 
         Save ->
             model
@@ -252,6 +255,11 @@ alwaysPreventDefault msg =
 --     E.on "change" (D.map tagger E.targetValue)
 
 
+onMouseUp : msg -> H.Attribute msg
+onMouseUp msg =
+    E.on "mouseup" (D.succeed msg)
+
+
 showMenu : Bool -> Maybe ( Circle, MousePos ) -> Html Msg
 showMenu isMenuOpen selected =
     case ( isMenuOpen, selected ) of
@@ -281,6 +289,7 @@ showMenu isMenuOpen selected =
                         , A.max "100"
                         , A.value (String.fromInt circle.r)
                         , E.onInput RadiusChanged
+                        , onMouseUp CloseMenuAndUnselect
                         , E.onBlur Save
                         ]
                         []
