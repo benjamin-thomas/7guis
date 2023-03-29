@@ -246,7 +246,9 @@ showMenu isMenuOpen selected =
                 [ A.style "position" "absolute"
                 , A.style "top" (String.fromInt (circlePos.absoluteY + 80) ++ "px")
                 , A.style "left" (String.fromInt circlePos.absoluteX ++ "px")
-                , A.style "background" "red"
+                , A.style "background" "#EEE"
+                , A.style "border" "1px solid grey"
+                , A.style "border-radius" "5px"
                 , A.style "padding" "10px 30px"
                 ]
                 [ H.div
@@ -295,7 +297,7 @@ view model =
                 , stroke c.stroke
                 , fill
                     (if selectedCircle == Just c then
-                        "orange"
+                        "lightgrey"
 
                      else
                         "transparent"
@@ -307,25 +309,30 @@ view model =
     H.div
         []
         [ H.h1
-            []
-            [ H.text "Circle Drawer" ]
-        , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <|
-                Debug.toString state.mousePos
-                    ++ " "
-                    ++ Debug.toString state.selected
-                    ++ " "
-                    ++ Debug.toString state.isMenuOpen
+            [ A.style "text-align" "center"
+            , A.style "margin-top" "50px"
+            , A.style "margin-bottom" "30px"
             ]
+            [ H.text "Circle Drawer" ]
+
+        -- , H.pre [ A.style "white-space" "pre-wrap" ]
+        --     [ H.text <|
+        --         Debug.toString state.mousePos
+        --             ++ " "
+        --             ++ Debug.toString state.selected
+        --             ++ " "
+        --             ++ Debug.toString state.isMenuOpen
+        --     ]
         , H.div [ A.style "text-align" "center" ]
-            [ H.div []
+            [ H.div [ A.style "margin" "10px" ]
                 [ H.button [ E.onClick Undo ] [ H.text "Undo" ]
+                , H.span [ A.style "padding" "2px" ] []
                 , H.button [ E.onClick Redo ] [ H.text "Redo" ]
                 ]
             , svg
                 [ width "400px"
                 , height "400px"
-                , A.style "border" "1px solid red"
+                , A.style "border" "1px solid lightgrey"
                 , E.on "mousemove" (D.map MouseMove decodeMousePos)
                 , E.onClick SelectOrAddCircle
 
@@ -335,14 +342,15 @@ view model =
                 (List.map viewCircle state.circles)
             , showMenu state.isMenuOpen state.selected
             ]
-        , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| "CIRCLES:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) state.circles) ]
-        , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| "PREV:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.prev)
-            ]
-        , H.pre [ A.style "white-space" "pre-wrap" ]
-            [ H.text <| "NEXT\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.next)
-            ]
+
+        -- , H.pre [ A.style "white-space" "pre-wrap" ]
+        --     [ H.text <| "CIRCLES:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) state.circles) ]
+        -- , H.pre [ A.style "white-space" "pre-wrap" ]
+        --     [ H.text <| "PREV:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.prev)
+        --     ]
+        -- , H.pre [ A.style "white-space" "pre-wrap" ]
+        --     [ H.text <| "NEXT\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.next)
+        --     ]
         ]
 
 
