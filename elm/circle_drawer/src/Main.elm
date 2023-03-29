@@ -66,7 +66,6 @@ type Msg
     | MouseRightClicked
     | RadiusChanged String
     | CloseMenuAndUnselect
-    | Save
     | Undo
     | Redo
 
@@ -182,8 +181,6 @@ update msg model =
                                 | selected = Just ( newCircle, pos )
                                 , circles = newCircles
                             }
-
-                        -- , prev = { curr | isMenuOpen = False } :: model.prev
                     }
 
                 _ ->
@@ -192,19 +189,6 @@ update msg model =
         CloseMenuAndUnselect ->
             { model | curr = { curr | isMenuOpen = False, selected = Nothing } }
 
-        Save ->
-            model
-
-        -- let
-        --     curr_ : State
-        --     curr_ =
-        --         model.curr
-        --     curr__ =
-        --         { curr_ | isMenuOpen = False }
-        --     _ =
-        --         Debug.log "cur_" curr_
-        -- in
-        -- { model | prev = curr__ :: model.prev }
         Undo ->
             case model.prev of
                 [] ->
@@ -249,12 +233,6 @@ alwaysPreventDefault msg =
     ( msg, True )
 
 
-
--- onChange : (String -> msg) -> H.Attribute msg
--- onChange tagger =
---     E.on "change" (D.map tagger E.targetValue)
-
-
 onMouseUp : msg -> H.Attribute msg
 onMouseUp msg =
     E.on "mouseup" (D.succeed msg)
@@ -290,7 +268,6 @@ showMenu isMenuOpen selected =
                         , A.value (String.fromInt circle.r)
                         , E.onInput RadiusChanged
                         , onMouseUp CloseMenuAndUnselect
-                        , E.onBlur Save
                         ]
                         []
                     ]
