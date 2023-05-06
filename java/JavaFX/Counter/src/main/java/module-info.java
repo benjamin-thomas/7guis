@@ -1,4 +1,4 @@
-module com.example.javafxcounter {
+module com.example.counter {
     requires javafx.controls;
     requires javafx.fxml;
 
