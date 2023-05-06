@@ -13,6 +13,6 @@
 
     <HBox alignment="CENTER" spacing="10">
         <TextField fx:id="counterText" style="-fx-max-width: 60px" disable="true"/>
-        <Button onAction="#onClick">Count</Button>
+        <Button onAction="#onClick" focusTraversable="false">Count</Button>
     </HBox>
 </VBox>
