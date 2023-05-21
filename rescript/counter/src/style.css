@@ -1,0 +1,27 @@
+body {
+    background: #222;
+    color: #DDD;
+    margin: 0;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+}
+
+#inc-area {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+#inc-area input,
+#inc-area button {
+    width: 80px;
+}
+
+#inc-area input {
+    text-align: right;
+}
