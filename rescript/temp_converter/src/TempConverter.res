@@ -55,8 +55,7 @@ let nonEmpty = str =>
   | x => Some(x)
   }
 
-let update = (model: model, msg) => {
-  let () = Js.Console.info(model)
+let update = (_model: model, msg) =>
   switch msg {
   | CelsiusChanged(str) => {
       let celsiusInp = nonEmpty(str)
@@ -73,7 +72,6 @@ let update = (model: model, msg) => {
       {fahrenheitInp, fahrenheitConv, celsiusConv, celsiusInp}
     }
   }
-}
 
 /*
  * VIEW
@@ -85,10 +83,11 @@ let bgColor = (inp, conv) => inp != None && conv == None ? "red" : ""
 
 let view = (model: model) => {
   let model_str = Js.Json.stringifyAny(model)->Option.getWithDefault("JSON ERROR!?")
+  let () = Js.Console.info(model)
   div(
     list{},
     list{
-      pre(list{}, list{text(model_str)}),
+      pre(list{}, list{text("DEBUG MODEL: " ++ model_str)}),
       h1(list{}, list{text("Temp converter")}),
       div(
         list{A.id("convert-area")},
