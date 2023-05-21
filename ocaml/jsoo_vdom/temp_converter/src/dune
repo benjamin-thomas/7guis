@@ -1,0 +1,6 @@
+(executable
+ (name main)
+ (libraries ocaml-vdom)
+ (preprocess
+  (pps ppx_deriving.show))
+ (modes js))
