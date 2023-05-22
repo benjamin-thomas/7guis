@@ -1,28 +1,50 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, div, input, label, span, text)
-import Html.Attributes exposing (value)
+import Html exposing (Html, div, h1, input, label, pre, text)
+import Html.Attributes exposing (style, value)
 import Html.Events exposing (onInput)
+import Round
 
 
 
 -- UTILS
 
 
-toCelsius : Float -> Float
-toCelsius f =
-    (f - 32) * 5 / 9
+toCelsius : Fahrenheit -> Celsius
+toCelsius (Fahrenheit f) =
+    Celsius <| (f - 32) * 5 / 9
 
 
-toFahrenheit : Float -> Float
-toFahrenheit c =
-    c * 9 / 5 + 32
+toFahrenheit : Celsius -> Fahrenheit
+toFahrenheit (Celsius c) =
+    Fahrenheit (c * 9 / 5 + 32)
 
 
-maybeConvert : (Float -> Float) -> String -> Maybe String
-maybeConvert f str =
-    String.toFloat str |> Maybe.map (f >> String.fromFloat)
+celsiusFromString : String -> Maybe Celsius
+celsiusFromString s =
+    s |> String.toFloat |> Maybe.map Celsius
+
+
+fahreheitFromString : String -> Maybe Fahrenheit
+fahreheitFromString s =
+    s |> String.toFloat |> Maybe.map Fahrenheit
+
+
+fromFloatPrecision2 : Float -> String
+fromFloatPrecision2 =
+    -- String.fromFloat gives undesirable results (i.e. 3.3333333...)
+    Round.round 2
+
+
+stringFromFahrenheit : Fahrenheit -> String
+stringFromFahrenheit (Fahrenheit val) =
+    fromFloatPrecision2 val
+
+
+stringFromCelsius : Celsius -> String
+stringFromCelsius (Celsius val) =
+    fromFloatPrecision2 val
 
 
 
@@ -30,23 +52,24 @@ maybeConvert f str =
 
 
 type Celsius
-    = Celsius String
+    = Celsius Float
 
 
 type Fahrenheit
-    = Fahrenheit String
+    = Fahrenheit Float
 
 
-type Model
-    = NoUserInput
-    | Converted Celsius Fahrenheit
-    | BadInputCelsius Celsius
-    | BadInputFahrenheit Fahrenheit
+type alias Model =
+    { celsius : { input : Maybe String, conv : Maybe Celsius }
+    , fahrenheit : { input : Maybe String, conv : Maybe Fahrenheit }
+    }
 
 
 init : Model
 init =
-    NoUserInput
+    { celsius = { input = Nothing, conv = Nothing }
+    , fahrenheit = { input = Nothing, conv = Nothing }
+    }
 
 
 
@@ -58,76 +81,111 @@ type Msg
     | FahrenheitChanged String
 
 
+nonEmpty : String -> Maybe String
+nonEmpty s =
+    case s of
+        "" ->
+            Nothing
+
+        x ->
+            Just x
+
+
 update : Msg -> Model -> Model
-update msg _ =
+update msg model =
     case msg of
-        CelsiusChanged celsius ->
-            case maybeConvert toFahrenheit celsius of
-                Nothing ->
-                    BadInputCelsius (Celsius celsius)
+        CelsiusChanged str ->
+            let
+                celsiusInp =
+                    nonEmpty str
 
-                Just fahrenheit ->
-                    Converted (Celsius celsius) (Fahrenheit fahrenheit)
+                celsiusConv =
+                    celsiusInp |> Maybe.andThen celsiusFromString
 
-        FahrenheitChanged fahrenheit ->
-            case maybeConvert toCelsius fahrenheit of
-                Nothing ->
-                    BadInputFahrenheit (Fahrenheit fahrenheit)
+                fahrenheitConv =
+                    celsiusConv |> Maybe.map toFahrenheit
 
-                Just celsius ->
-                    Converted (Celsius celsius) (Fahrenheit fahrenheit)
+                fahrenheitInp =
+                    fahrenheitConv |> Maybe.map stringFromFahrenheit
+            in
+            { model
+                | celsius = { input = celsiusInp, conv = celsiusConv }
+                , fahrenheit = { input = fahrenheitInp, conv = fahrenheitConv }
+            }
+
+        FahrenheitChanged str ->
+            let
+                fahrenheitInp =
+                    nonEmpty str
+
+                fahrenheitConv =
+                    fahrenheitInp |> Maybe.andThen fahreheitFromString
+
+                celsiusConv =
+                    fahrenheitConv |> Maybe.map toCelsius
+
+                celsiusInp =
+                    celsiusConv |> Maybe.map stringFromCelsius
+            in
+            { model
+                | celsius = { input = celsiusInp, conv = celsiusConv }
+                , fahrenheit = { input = fahrenheitInp, conv = fahrenheitConv }
+            }
 
 
 
 -- VIEW
 
 
-valueFor : Model -> { celsius : String, fahrenheit : String }
-valueFor model =
-    case model of
-        NoUserInput ->
-            { celsius = "", fahrenheit = "" }
+showInvalid : String -> { input : Maybe input, conv : Maybe converted } -> Html msg
+showInvalid errMsg { input, conv } =
+    if input /= Nothing && conv == Nothing then
+        div [] [ text errMsg ]
 
-        Converted (Celsius celsius) (Fahrenheit fahrenheit) ->
-            { celsius = celsius, fahrenheit = fahrenheit }
-
-        BadInputCelsius (Celsius celsius) ->
-            { celsius = celsius, fahrenheit = "" }
-
-        BadInputFahrenheit (Fahrenheit fahrenheit) ->
-            { celsius = "", fahrenheit = fahrenheit }
-
-
-showInvalid : Model -> Html msg
-showInvalid model =
-    case model of
-        BadInputCelsius _ ->
-            text "Celsius: bad input!"
-
-        BadInputFahrenheit _ ->
-            text "Fahrenheit: bad input!"
-
-        NoUserInput ->
-            text ""
-
-        Converted _ _ ->
-            text ""
+    else
+        text ""
 
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ span []
-            [ input [ value (valueFor model).celsius, onInput CelsiusChanged ] []
-            , label [] [ text "Celsius" ]
-            ]
-        , span [] [ text " = " ]
-        , span []
-            [ input [ value (valueFor model).fahrenheit, onInput FahrenheitChanged ] []
-            , label [] [ text "Fahrenheit" ]
-            ]
-        , div []
-            [ showInvalid model
+    div [ style "margin-left" "20px" ]
+        [ pre [] [ text <| Debug.toString model ]
+        , h1 [] [ text "Temp converter (Elm)" ]
+        , div [ style "display" "flex" ]
+            [ div []
+                [ input
+                    [ value (model.celsius.input |> Maybe.withDefault "")
+                    , style "background-color"
+                        (if model.celsius.input /= Nothing && model.celsius.conv == Nothing then
+                            "red"
+
+                         else
+                            ""
+                        )
+                    , onInput CelsiusChanged
+                    ]
+                    []
+                , label [] [ text "Celsius" ]
+                , showInvalid "Bad celsius" model.celsius
+                ]
+            , div []
+                [ input
+                    [ value (model.fahrenheit.input |> Maybe.withDefault "")
+                    , style "background-color"
+                        (if model.fahrenheit.input /= Nothing && model.fahrenheit.conv == Nothing then
+                            "red"
+
+                         else
+                            ""
+                        )
+                    , onInput FahrenheitChanged
+                    ]
+                    []
+                , label [] [ text "Fahrenheit" ]
+                , showInvalid "Bad fahrenheit" model.fahrenheit
+                ]
+            , div []
+                []
             ]
         ]
 
