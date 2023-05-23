@@ -1,5 +1,8 @@
 module H = Fmlib_browser.Html
 module A = Fmlib_browser.Attribute
+module Celsius = Lib.Celsius
+module Fahrenheit = Lib.Fahrenheit
+module Units = Lib.Units
 
 (* [@@@warning "-a-l-l"] *)
 
@@ -9,8 +12,8 @@ let ( >>= ) = Option.bind
  * MODEL
  *)
 
-type celsius = Celsius of float
-type fahrenheit = Fahrenheit of float
+type celsius = Units.celsius
+type fahrenheit = Units.fahrenheit
 
 type model =
   { celsius_inp : string option
@@ -18,28 +21,6 @@ type model =
   ; fahrenheit_inp : string option
   ; fahrenheit_conv : fahrenheit option
   }
-
-let fahrenheit_of_celsius (Celsius c) =
-  let value = (c *. (9.0 /. 5.0)) +. 32.0 in
-  Fahrenheit value
-;;
-
-let celsius_of_fahrenheit (Fahrenheit f) =
-  let value = (f -. 32.0) *. (5.0 /. 9.0) in
-  Celsius value
-;;
-
-let celsius_of_string_opt str =
-  str |> float_of_string_opt |> Option.map (fun x -> Celsius x)
-;;
-
-let fahrenheit_of_string_opt str =
-  str |> float_of_string_opt |> Option.map (fun x -> Fahrenheit x)
-;;
-
-let string_of_float' = Printf.sprintf "%.2f"
-let string_of_fahrenheit (Fahrenheit v) = string_of_float' v
-let string_of_celsius (Celsius v) = string_of_float' v
 
 let init : model =
   { celsius_inp = None
@@ -64,17 +45,19 @@ let update (_model : model) msg =
   match msg with
   | CelsiusChanged str ->
       let celsius_inp = non_empty str in
-      let celsius_conv = celsius_inp >>= celsius_of_string_opt in
-      let fahrenheit_conv = celsius_conv |> Option.map fahrenheit_of_celsius in
-      let fahrenheit_inp = fahrenheit_conv |> Option.map string_of_fahrenheit in
+      let celsius_conv = celsius_inp >>= Celsius.from_string in
+      let fahrenheit_conv =
+        celsius_conv |> Option.map Fahrenheit.from_celsius
+      in
+      let fahrenheit_inp = fahrenheit_conv |> Option.map Fahrenheit.to_string in
       { celsius_inp; celsius_conv; fahrenheit_conv; fahrenheit_inp }
   | FahrenheitChanged str ->
       let fahrenheit_inp = non_empty str in
-      let fahrenheit_conv = fahrenheit_inp >>= fahrenheit_of_string_opt in
+      let fahrenheit_conv = fahrenheit_inp >>= Fahrenheit.from_string in
       let celsius_conv =
-        str |> fahrenheit_of_string_opt |> Option.map celsius_of_fahrenheit
+        fahrenheit_conv |> Option.map Celsius.from_fahrenheit
       in
-      let celsius_inp = celsius_conv |> Option.map string_of_celsius in
+      let celsius_inp = celsius_conv |> Option.map Celsius.to_string in
       { fahrenheit_inp; fahrenheit_conv; celsius_conv; celsius_inp }
 ;;
 
