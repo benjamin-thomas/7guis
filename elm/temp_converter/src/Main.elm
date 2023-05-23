@@ -1,62 +1,16 @@
 module Main exposing (main)
 
 import Browser
+import Conversions.Celsius
+import Conversions.Fahrenheit
+import Conversions.Units exposing (Celsius, Fahrenheit)
 import Html exposing (Html, div, h1, input, label, pre, text)
 import Html.Attributes exposing (style, value)
 import Html.Events exposing (onInput)
-import Round
-
-
-
--- UTILS
-
-
-toCelsius : Fahrenheit -> Celsius
-toCelsius (Fahrenheit f) =
-    Celsius <| (f - 32) * 5 / 9
-
-
-toFahrenheit : Celsius -> Fahrenheit
-toFahrenheit (Celsius c) =
-    Fahrenheit (c * 9 / 5 + 32)
-
-
-celsiusFromString : String -> Maybe Celsius
-celsiusFromString s =
-    s |> String.toFloat |> Maybe.map Celsius
-
-
-fahreheitFromString : String -> Maybe Fahrenheit
-fahreheitFromString s =
-    s |> String.toFloat |> Maybe.map Fahrenheit
-
-
-fromFloatPrecision2 : Float -> String
-fromFloatPrecision2 =
-    -- String.fromFloat gives undesirable results (i.e. 3.3333333...)
-    Round.round 2
-
-
-stringFromFahrenheit : Fahrenheit -> String
-stringFromFahrenheit (Fahrenheit val) =
-    fromFloatPrecision2 val
-
-
-stringFromCelsius : Celsius -> String
-stringFromCelsius (Celsius val) =
-    fromFloatPrecision2 val
 
 
 
 -- MODEL
-
-
-type Celsius
-    = Celsius Float
-
-
-type Fahrenheit
-    = Fahrenheit Float
 
 
 type alias Model =
@@ -100,13 +54,13 @@ update msg model =
                     nonEmpty str
 
                 celsiusConv =
-                    celsiusInp |> Maybe.andThen celsiusFromString
+                    celsiusInp |> Maybe.andThen Conversions.Celsius.fromString
 
                 fahrenheitConv =
-                    celsiusConv |> Maybe.map toFahrenheit
+                    celsiusConv |> Maybe.map Conversions.Celsius.toFahrenheit
 
                 fahrenheitInp =
-                    fahrenheitConv |> Maybe.map stringFromFahrenheit
+                    fahrenheitConv |> Maybe.map Conversions.Fahrenheit.toString
             in
             { model
                 | celsius = { input = celsiusInp, conv = celsiusConv }
@@ -119,13 +73,13 @@ update msg model =
                     nonEmpty str
 
                 fahrenheitConv =
-                    fahrenheitInp |> Maybe.andThen fahreheitFromString
+                    fahrenheitInp |> Maybe.andThen Conversions.Fahrenheit.fromString
 
                 celsiusConv =
-                    fahrenheitConv |> Maybe.map toCelsius
+                    fahrenheitConv |> Maybe.map Conversions.Fahrenheit.toCelsius
 
                 celsiusInp =
-                    celsiusConv |> Maybe.map stringFromCelsius
+                    celsiusConv |> Maybe.map Conversions.Celsius.toString
             in
             { model
                 | celsius = { input = celsiusInp, conv = celsiusConv }
@@ -180,7 +134,7 @@ view model =
                 [ input
                     [ value (model.fahrenheit.input |> Maybe.withDefault "")
                     , style "background-color" (bgColor model.fahrenheit)
-                    , onInput FahrenheitChanged
+                    , onInput CelsiusChanged
                     ]
                     []
                 , label [] [ text "Fahrenheit" ]
