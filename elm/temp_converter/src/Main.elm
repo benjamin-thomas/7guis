@@ -1,8 +1,8 @@
 module Main exposing (main)
 
 import Browser
-import Conversions.Celsius
-import Conversions.Fahrenheit
+import Conversions.Celsius as Celsius
+import Conversions.Fahrenheit as Fahrenheit
 import Conversions.Units exposing (Celsius, Fahrenheit)
 import Html exposing (Html, div, h1, input, label, pre, text)
 import Html.Attributes exposing (style, value)
@@ -54,13 +54,13 @@ update msg model =
                     nonEmpty str
 
                 celsiusConv =
-                    celsiusInp |> Maybe.andThen Conversions.Celsius.fromString
+                    celsiusInp |> Maybe.andThen Celsius.fromString
 
                 fahrenheitConv =
-                    celsiusConv |> Maybe.map Conversions.Celsius.toFahrenheit
+                    celsiusConv |> Maybe.map Celsius.toFahrenheit
 
                 fahrenheitInp =
-                    fahrenheitConv |> Maybe.map Conversions.Fahrenheit.toString
+                    fahrenheitConv |> Maybe.map Fahrenheit.toString
             in
             { model
                 | celsius = { input = celsiusInp, conv = celsiusConv }
@@ -73,13 +73,13 @@ update msg model =
                     nonEmpty str
 
                 fahrenheitConv =
-                    fahrenheitInp |> Maybe.andThen Conversions.Fahrenheit.fromString
+                    fahrenheitInp |> Maybe.andThen Fahrenheit.fromString
 
                 celsiusConv =
-                    fahrenheitConv |> Maybe.map Conversions.Fahrenheit.toCelsius
+                    fahrenheitConv |> Maybe.map Fahrenheit.toCelsius
 
                 celsiusInp =
-                    celsiusConv |> Maybe.map Conversions.Celsius.toString
+                    celsiusConv |> Maybe.map Celsius.toString
             in
             { model
                 | celsius = { input = celsiusInp, conv = celsiusConv }
@@ -134,7 +134,7 @@ view model =
                 [ input
                     [ value (model.fahrenheit.input |> Maybe.withDefault "")
                     , background model.fahrenheit
-                    , onInput CelsiusChanged
+                    , onInput FahrenheitChanged
                     ]
                     []
                 , label [] [ text "Fahrenheit" ]
