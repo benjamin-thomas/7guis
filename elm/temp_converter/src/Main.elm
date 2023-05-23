@@ -96,13 +96,13 @@ isInvalid { input, conv } =
     input /= Nothing && conv == Nothing
 
 
-bgColor : { input : Maybe input, conv : Maybe converted } -> String
-bgColor result =
+background : { input : Maybe input, conv : Maybe converted } -> Html.Attribute msg
+background result =
     if isInvalid result then
-        "red"
+        style "background-color" "red"
 
     else
-        ""
+        style "" ""
 
 
 showInvalid : String -> { input : Maybe input, conv : Maybe converted } -> Html msg
@@ -123,7 +123,7 @@ view model =
             [ div []
                 [ input
                     [ value (model.celsius.input |> Maybe.withDefault "")
-                    , style "background-color" (bgColor model.celsius)
+                    , background model.celsius
                     , onInput CelsiusChanged
                     ]
                     []
@@ -133,7 +133,7 @@ view model =
             , div []
                 [ input
                     [ value (model.fahrenheit.input |> Maybe.withDefault "")
-                    , style "background-color" (bgColor model.fahrenheit)
+                    , background model.fahrenheit
                     , onInput CelsiusChanged
                     ]
                     []
