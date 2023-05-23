@@ -137,9 +137,23 @@ update msg model =
 -- VIEW
 
 
+isInvalid : { input : Maybe input, conv : Maybe converted } -> Bool
+isInvalid { input, conv } =
+    input /= Nothing && conv == Nothing
+
+
+bgColor : { input : Maybe input, conv : Maybe converted } -> String
+bgColor result =
+    if isInvalid result then
+        "red"
+
+    else
+        ""
+
+
 showInvalid : String -> { input : Maybe input, conv : Maybe converted } -> Html msg
-showInvalid errMsg { input, conv } =
-    if input /= Nothing && conv == Nothing then
+showInvalid errMsg result =
+    if isInvalid result then
         div [] [ text errMsg ]
 
     else
@@ -155,13 +169,7 @@ view model =
             [ div []
                 [ input
                     [ value (model.celsius.input |> Maybe.withDefault "")
-                    , style "background-color"
-                        (if model.celsius.input /= Nothing && model.celsius.conv == Nothing then
-                            "red"
-
-                         else
-                            ""
-                        )
+                    , style "background-color" (bgColor model.celsius)
                     , onInput CelsiusChanged
                     ]
                     []
@@ -171,13 +179,7 @@ view model =
             , div []
                 [ input
                     [ value (model.fahrenheit.input |> Maybe.withDefault "")
-                    , style "background-color"
-                        (if model.fahrenheit.input /= Nothing && model.fahrenheit.conv == Nothing then
-                            "red"
-
-                         else
-                            ""
-                        )
+                    , style "background-color" (bgColor model.fahrenheit)
                     , onInput FahrenheitChanged
                     ]
                     []
