@@ -44,22 +44,29 @@ let non_empty = function
 let update (_model : model) msg =
   match msg with
   | CelsiusChanged str ->
-      let celsius_inp = non_empty str in
-      let celsius_conv = celsius_inp >>= Celsius.from_string in
-      let fahrenheit_conv =
-        celsius_conv |> Option.map Fahrenheit.from_celsius
-      in
-      let fahrenheit_inp = fahrenheit_conv |> Option.map Fahrenheit.to_string in
-      { celsius_inp; celsius_conv; fahrenheit_conv; fahrenheit_inp }
+      let celsius_inp     = non_empty str in
+      let celsius_conv    = celsius_inp     >>= Celsius.from_string in
+      let fahrenheit_conv = celsius_conv    |> Option.map Fahrenheit.from_celsius in
+      let fahrenheit_inp  = fahrenheit_conv |> Option.map Fahrenheit.to_string in
+
+      { celsius_inp
+      ; celsius_conv
+      ; fahrenheit_conv
+      ; fahrenheit_inp
+      }
+
   | FahrenheitChanged str ->
-      let fahrenheit_inp = non_empty str in
-      let fahrenheit_conv = fahrenheit_inp >>= Fahrenheit.from_string in
-      let celsius_conv =
-        fahrenheit_conv |> Option.map Celsius.from_fahrenheit
-      in
-      let celsius_inp = celsius_conv |> Option.map Celsius.to_string in
-      { fahrenheit_inp; fahrenheit_conv; celsius_conv; celsius_inp }
-;;
+      let fahrenheit_inp  = non_empty str in
+      let fahrenheit_conv = fahrenheit_inp  >>= Fahrenheit.from_string in
+      let celsius_conv    = fahrenheit_conv |> Option.map Celsius.from_fahrenheit in
+      let celsius_inp     = celsius_conv    |> Option.map Celsius.to_string in
+
+      { fahrenheit_inp
+      ; fahrenheit_conv
+      ; celsius_conv
+      ; celsius_inp
+      }
+  [@@ocamlformat "disable"]
 
 (*
  * VIEW
