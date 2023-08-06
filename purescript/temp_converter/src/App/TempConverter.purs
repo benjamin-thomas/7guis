@@ -19,24 +19,33 @@ import Halogen.HTML.Properties as HP
 import Parsing (ParseError, runParser)
 import Parsing.String (eof)
 
-type State = { celsius :: Maybe String, fahrenheit :: Maybe String, error :: Either String Unit }
+type State =
+  { celsius :: Maybe String
+  , fahrenheit :: Maybe String
+  , error :: Either String Unit
+  }
 
-data Action = CelsiusChanged String | FahrenheitChanged String
+data Action
+  = CelsiusChanged String
+  | FahrenheitChanged String
 
 component :: forall q i o m. H.Component q i o m
 component =
   H.mkComponent
-    { initialState: \_ -> { celsius: Nothing, fahrenheit: Nothing, error: Right unit }
+    { initialState
     , render
-    , eval: H.mkEval H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval H.defaultEval
+        { handleAction = handleAction
+        }
     }
+
+  where
+  initialState = const { celsius: Nothing, fahrenheit: Nothing, error: Right unit }
 
 render :: forall cs m. State -> H.ComponentHTML Action cs m
 render state =
   let
-    celsius = "celsius"
-    fahrenheit = "fahrenheit"
-    input id label mValue action =
+    input { id, label } mValue action =
       HH.span_
         [ HH.input
             [ HP.id id
@@ -44,18 +53,22 @@ render state =
             , HE.onValueInput \s -> action s
             , HP.value $ fromMaybe "" mValue
             ]
-        , HH.label [ HP.for id ] [ HH.text label ]
+        , HH.label
+            [ HP.for id ]
+            [ HH.text label ]
         ]
   in
     HH.div_
-      [ HH.h1_ [ HH.text "Temperature Converter" ]
+      [ HH.h1_
+          [ HH.text "Temperature Converter" ]
       , HH.div_
-          [ input celsius "Celsius" state.celsius CelsiusChanged
-          , input fahrenheit "Fahrenheit" state.fahrenheit FahrenheitChanged
+          [ input { id: "celsius", label: "Celsius" } state.celsius CelsiusChanged
+          , input { id: "fahrenheit", label: "Fahrenheit" } state.fahrenheit FahrenheitChanged
           ]
 
       -- , HH.pre_ [ HH.text $ "C:" <> show state.celsius <> " F:" <> show state.fahrenheit ]
-      , HH.p_ [ HH.text $ showErr state.error ]
+      , HH.p_
+          [ HH.text $ showErr state.error ]
       ]
 
 showErr ∷ Either String Unit → String
