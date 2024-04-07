@@ -1,6 +1,5 @@
 port module Main exposing (main)
 
-import Html exposing (text)
 import Json.Encode as E
 import Web
 import Web.Dom
