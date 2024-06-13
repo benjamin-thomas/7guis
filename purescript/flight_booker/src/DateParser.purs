@@ -1,19 +1,20 @@
 module DateParser
   ( ParseError'(..)
-  , month
   , parse
   , parse'
-  , parser
   ) where
 
 import Prelude
 
 import Data.Array (replicate)
+import Data.Bifunctor (lmap)
 import Data.Date (Date, Day, Month, Year, exactDate)
-import Data.Either (Either(..))
+import Data.Either (Either)
 import Data.Enum (toEnum)
+import Data.Generic.Rep (class Generic)
 import Data.Int (fromString)
 import Data.Maybe (fromJust, maybe)
+import Data.Show.Generic (genericShow)
 import Data.String as String
 import Data.String.CodeUnits (fromCharArray)
 import Data.Traversable (sequence)
@@ -96,11 +97,12 @@ parser =
   dot = char '.'
   mkDate d m y = exactDate y m d
 
--- parse :: String -> Either ParseError Date
 parse ∷ String → Either ParseError Date
-parse str = runParser str parser
+parse str = runParser str $ parser <* eof
 
-data ParseError' = Full ParseError | Incomplete
+data ParseError'
+  = OkButIncompleteEntry
+  | BadEntry ParseError
 
 -- instance Eq ParseError' where
 --   eq (Full a) (Full b) = eq a b
@@ -108,24 +110,30 @@ data ParseError' = Full ParseError | Incomplete
 --   eq _ _ = false
 derive instance Eq ParseError'
 
-instance Show ParseError' where
-  show (Full e) = "Full " <> show e
-  show (Incomplete) = "Incomplete"
+-- instance Show ParseError' where
+--   show (Full e) = "Full " <> show e
+--   show (Incomplete) = "Incomplete"
+derive instance Generic ParseError' _
 
-{-| This version of `parse` returns `Unit` instead of a `ParseError` if the
-    input hasn't provided the full input yet.
--}
+instance Show ParseError' where
+  show = genericShow
+
 parse' ∷ { str :: String, expectedLength :: Int } → Either ParseError' Date
 parse' { str, expectedLength } =
   let
-    check :: Position -> Boolean
-    check (Position { index }) = (String.length str /= expectedLength) && index == (String.length str)
+    isBadEntry :: Position -> Boolean
+    isBadEntry (Position { index }) =
+      let
+        strLen = String.length str
+      in
+        strLen == expectedLength || strLen /= index
   in
-    case runParser str (parser <* eof) of
-      Right date -> Right date
-      Left (ParseError (msg :: String) (pos :: Position)) ->
-        if check pos then
-          Left Incomplete
-        else
-          Left $ Full (ParseError msg pos)
+    lmap
+      ( \(ParseError msg pos) ->
+          if isBadEntry pos then
+            BadEntry (ParseError msg pos)
+          else
+            OkButIncompleteEntry
+      )
+      (runParser str $ parser <* eof)
 

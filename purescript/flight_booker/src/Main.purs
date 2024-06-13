@@ -75,16 +75,14 @@ type CheckStatusReturn =
 
 checkDate :: String -> Either String Date
 checkDate str =
-  let
-    expectedLength = String.length "DD.MM.YYYY"
-
-    toString :: ParseError' -> String
-    toString (Full (ParseError errMsg _pos)) = errMsg
-    toString (Incomplete) = "Incomplete (ok up to now)"
-  in
-    lmap
-      toString
-      (DateParser.parse' { str, expectedLength })
+  lmap
+    ( case _ of
+        OkButIncompleteEntry -> "Ok (but incomplete)"
+        BadEntry (ParseError errMsg _pos) -> errMsg
+    )
+    (DateParser.parse' { str, expectedLength })
+  where
+  expectedLength = String.length "DD.MM.YYYY"
 
 checkGlobalOneWay :: { from :: String } -> CheckStatusOneWay
 checkGlobalOneWay { from } =
