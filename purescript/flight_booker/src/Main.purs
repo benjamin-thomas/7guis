@@ -70,12 +70,16 @@ derive instance Generic FocusedField _
 instance Show FocusedField where
   show = genericShow
 
-type State =
+type Editing =
   { flightOption :: FlightOption
   , from :: String
   , to :: String
   , focusedField :: FocusedField
   }
+
+data State
+  = Editing Editing
+  | Confirmed String
 
 data Action
   = FlightOptionChanged Int
@@ -83,6 +87,10 @@ data Action
   | ToChanged String
   | FocusChanged FocusedField
   | Submit
+
+derive instance Generic Action _
+instance Show Action where
+  show = genericShow
 
 type CheckStatusOneWay =
   { fromError :: Maybe String
@@ -151,37 +159,47 @@ component =
 
   initialState :: Unit -> State
   initialState _ =
-    { flightOption: OneWayFlight
-    , from: ""
-    , to: ""
-    , focusedField: FromField
-    }
+    Editing
+      { flightOption: OneWayFlight
+      , from: ""
+      , to: ""
+      , focusedField: FromField
+      }
 
   handleAction :: Action -> H.HalogenM State Action () output m Unit
-  handleAction = case _ of
-    FlightOptionChanged idx -> do
-      log ("idx=" <> show idx) -- FIXME: remove MonadEffect at the end
-      if idx == 1 then
-        H.modify_ _ { flightOption = ReturnFlight }
-      else
-        H.modify_ _ { flightOption = OneWayFlight, to = "" }
+  handleAction action = do
+    log ("action" <> " : " <> show action)
+    case action of
+      FlightOptionChanged idx -> do
+        H.modify_ case _ of
+          Editing edit -> Editing $ edit { flightOption = if idx == 1 then ReturnFlight else OneWayFlight }
+          x -> x
 
-    FromChanged from ->
-      -- H.modify_ \state -> state { from = from }
-      H.modify_ _ { from = from, focusedField = FromField }
+      FromChanged from ->
+        H.modify_ case _ of
+          Editing edit -> Editing $ edit { from = from, focusedField = FromField }
+          x -> x
 
-    ToChanged to ->
-      H.modify_ _ { to = to, focusedField = ToField }
+      ToChanged to ->
+        H.modify_ case _ of
+          Editing edit -> Editing $ edit { to = to, focusedField = ToField }
+          x -> x
 
-    FocusChanged field ->
-      H.modify_ _ { focusedField = field }
+      FocusChanged field ->
+        H.modify_ case _ of
+          Editing edit -> Editing $ edit { focusedField = field }
+          x -> x
 
-    Submit ->
-      -- TODO: handle submit
-      pure unit
+      Submit ->
+        H.modify_ case _ of
+          Editing edit ->
+            case edit.flightOption of
+              OneWayFlight -> Confirmed "Your one-way flight has been booked"
+              ReturnFlight -> Confirmed "Your return flight has been booked"
+          x -> x
 
-  render :: State -> H.ComponentHTML Action () m
-  render state =
+  renderEditing :: Editing -> H.ComponentHTML Action () m
+  renderEditing state =
     let
       renderError :: String -> H.ComponentHTML Action () m
       renderError err =
@@ -305,3 +323,9 @@ component =
                     ]
             )
         ]
+
+  render :: State -> H.ComponentHTML Action () m
+  render = case _ of
+    Editing state -> renderEditing state
+    Confirmed msg -> HH.text msg
+
