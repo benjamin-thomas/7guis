@@ -166,37 +166,33 @@ component =
       , focusedField: FromField
       }
 
+  handleEditing :: Editing -> Action -> State
+  handleEditing edit = case _ of
+    FlightOptionChanged idx ->
+      Editing $ edit { flightOption = if idx == 1 then ReturnFlight else OneWayFlight }
+
+    FromChanged from ->
+      Editing $ edit { from = from, focusedField = FromField }
+
+    ToChanged to ->
+      Editing $ edit { to = to, focusedField = ToField }
+
+    FocusChanged field ->
+      Editing $ edit { focusedField = field }
+
+    Submit ->
+      case edit.flightOption of
+        OneWayFlight -> Confirmed "Your one-way flight has been booked"
+        ReturnFlight -> Confirmed "Your return flight has been booked"
+
   handleAction :: Action -> H.HalogenM State Action () output m Unit
   handleAction action = do
     log ("action" <> " : " <> show action)
-    case action of
-      FlightOptionChanged idx -> do
-        H.modify_ case _ of
-          Editing edit -> Editing $ edit { flightOption = if idx == 1 then ReturnFlight else OneWayFlight }
-          x -> x
+    H.modify_ case _ of
+      Editing edit ->
+        handleEditing edit action
 
-      FromChanged from ->
-        H.modify_ case _ of
-          Editing edit -> Editing $ edit { from = from, focusedField = FromField }
-          x -> x
-
-      ToChanged to ->
-        H.modify_ case _ of
-          Editing edit -> Editing $ edit { to = to, focusedField = ToField }
-          x -> x
-
-      FocusChanged field ->
-        H.modify_ case _ of
-          Editing edit -> Editing $ edit { focusedField = field }
-          x -> x
-
-      Submit ->
-        H.modify_ case _ of
-          Editing edit ->
-            case edit.flightOption of
-              OneWayFlight -> Confirmed "Your one-way flight has been booked"
-              ReturnFlight -> Confirmed "Your return flight has been booked"
-          x -> x
+      Confirmed msg -> Confirmed msg
 
   renderEditing :: Editing -> H.ComponentHTML Action () m
   renderEditing state =
