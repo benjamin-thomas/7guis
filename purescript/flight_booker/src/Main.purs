@@ -1,6 +1,5 @@
 module Main
-  ( checkDate
-  , main
+  ( main
   ) where
 
 import Prelude
@@ -9,7 +8,9 @@ import Data.Array (mapMaybe, null)
 import Data.Bifunctor (lmap)
 import Data.Date (Date)
 import Data.Either (Either(..), blush)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
+import Data.Show.Generic (genericShow)
 import Data.String as String
 import DateParser (ParseError'(..))
 import DateParser as DateParser
@@ -25,6 +26,19 @@ import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 import Parsing (ParseError(..))
 
+{-
+
+Possible improvements:
+
+- Track a "dirty" state for each input field
+  - Show red background only if dirty or input is complete (len=10)
+  - Remove the dirty tag once valid
+
+- Global errors should be shown only if all fields are valid
+  - Otherwise, it's duplicate information from the user's point of view
+
+ -}
+
 main :: Effect Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
@@ -36,17 +50,25 @@ data FlightOption
 
 derive instance Eq FlightOption
 
+-- instance Show FlightOption where
+--   show OneWayFlight = "OneWayFlight"
+--   show ReturnFlight = "ReturnFlight"
+
+derive instance Generic FlightOption _
 instance Show FlightOption where
-  show OneWayFlight = "OneWayFlight"
-  show ReturnFlight = "ReturnFlight"
+  show = genericShow
 
 data FocusedField = FromField | ToField
 
 derive instance Eq FocusedField
 
+-- instance Show FocusedField where
+--   show FromField = "FromField"
+--   show ToField = "ToField"
+
+derive instance Generic FocusedField _
 instance Show FocusedField where
-  show FromField = "FromField"
-  show ToField = "ToField"
+  show = genericShow
 
 type State =
   { flightOption :: FlightOption
@@ -101,15 +123,15 @@ checkGlobalReturn :: { from :: String, to :: String } -> CheckStatusReturn
 checkGlobalReturn { from, to } =
   case checkDate from, checkDate to of
     Right fromDate, Right toDate ->
-      if fromDate > toDate then
+      if fromDate <= toDate then
         { fromError: Nothing
         , toError: Nothing
-        , globalErrors: [ "From date occurs after to date" ]
+        , globalErrors: []
         }
       else
         { fromError: Nothing
         , toError: Nothing
-        , globalErrors: []
+        , globalErrors: [ "From date occurs after to date" ]
         }
 
     fromError, toError ->
@@ -117,20 +139,6 @@ checkGlobalReturn { from, to } =
       , toError: blush toError
       , globalErrors: [ "One or more invalid dates" ]
       }
-
-errorStyle
-  :: forall r i
-   . { value :: String, focusedField :: FocusedField, self :: FocusedField }
-  -> IProp (style :: String | r) i
-errorStyle { value, focusedField, self } =
-  let
-    len = String.length value
-  in
-    HP.style $
-      if len > 1 && (len >= 10 || focusedField /= self) then
-        "background:red;"
-      else
-        ""
 
 component :: forall query output m. MonadEffect m => H.Component query Unit output m
 component =
@@ -181,6 +189,17 @@ component =
           [ HP.style "color:lightgrey; margin-left:5px;" ]
           [ HH.text err ]
 
+      errorStyle :: forall r i. { value :: String, self :: FocusedField } -> IProp (style :: String | r) i
+      errorStyle { value, self } =
+        let
+          len = String.length value
+        in
+          HP.style $
+            if len > 1 && (len >= 10 || state.focusedField /= self) then
+              "background:red;"
+            else
+              ""
+
       flightOptionInput :: H.ComponentHTML Action () m
       flightOptionInput = HH.select [ HE.onSelectedIndexChange FlightOptionChanged ]
         [ HH.option_ [ HH.text "One Way" ]
@@ -209,7 +228,6 @@ component =
                 Just err ->
                   [ mkInput $ Just $ errorStyle
                       { value: state.from
-                      , focusedField: state.focusedField
                       , self: FromField
                       }
                   , renderError err
@@ -240,11 +258,16 @@ component =
               Just err ->
                 [ mkInput $ Just $ errorStyle
                     { value: state.to
-                    , focusedField: state.focusedField
                     , self: ToField
                     }
                 , renderError err
                 ]
+
+      renderGlobalErrors { globalErrors } =
+        if null globalErrors then
+          HH.div [ HP.style "color:green" ] [ HH.text "All good ✓" ]
+        else
+          HH.div_ (map (renderError) globalErrors)
 
       submitBtn :: { globalErrors :: Array String } -> H.ComponentHTML Action () m
       submitBtn { globalErrors } = HH.button
@@ -253,7 +276,6 @@ component =
         ]
         [ HH.text "Book" ]
 
-      viewGlobalErrors { globalErrors } = HH.div_ (map (renderError) globalErrors)
     in
       HH.div_
         [ HH.h1_ [ HH.text "Flight Booker" ]
@@ -267,8 +289,7 @@ component =
                     [ flightOptionInput
                     , fromInput { fromError }
                     , toInput { disabled: true, toError: Nothing }
-                    , viewGlobalErrors { globalErrors }
-                    , HH.br_
+                    , renderGlobalErrors { globalErrors }
                     , submitBtn { globalErrors }
                     ]
 
@@ -278,9 +299,8 @@ component =
                   in
                     [ flightOptionInput
                     , fromInput { fromError }
-                    , toInput { disabled: false, toError: toError }
-                    , viewGlobalErrors { globalErrors }
-                    , HH.br_
+                    , toInput { disabled: false, toError }
+                    , renderGlobalErrors { globalErrors }
                     , submitBtn { globalErrors }
                     ]
             )
