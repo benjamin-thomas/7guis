@@ -2,7 +2,7 @@ module Main (main) where
 
 import Prelude
 
-import Data.Array (deleteAt, length, (!!))
+import Data.Array (deleteAt, length, modifyAt, (!!))
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Show.Generic (genericShow)
@@ -47,6 +47,7 @@ data Action
   | FirstNameChanged String
   | LastNameChanged String
   | PersonSelected Int
+  | UpdateBtnClicked
   | DeleteBtnClicked
 
 derive instance Generic Action _
@@ -113,6 +114,7 @@ component =
       Initialize ->
         H.get >>= \state ->
           handleAction $ PersonSelected state.form.selectedPersonIdx
+
       TermChanged str ->
         H.modify_ _ { form { term = str } }
 
@@ -138,6 +140,26 @@ component =
                           , lastName = person.lastName
                           }
                       }
+
+      UpdateBtnClicked ->
+        H.modify_ \state ->
+          case state.data of
+            Loaded db ->
+              let
+                newDb :: Array Person
+                newDb =
+                  fromMaybe db $
+                    modifyAt
+                      (state.form.selectedPersonIdx)
+                      ( _
+                          { firstName = state.form.firstName
+                          , lastName = state.form.lastName
+                          }
+                      )
+                      db
+              in
+                state { data = Loaded newDb }
+
       DeleteBtnClicked -> do
         H.modify_ \state ->
           case state.data of
@@ -222,7 +244,7 @@ component =
 
           , HH.div [ HP.id "buttons" ]
               [ HH.button [] [ HH.text "Create" ]
-              , HH.button [] [ HH.text "Update" ]
+              , HH.button [ HE.onClick (const UpdateBtnClicked) ] [ HH.text "Update" ]
               , HH.button [ HE.onClick (const DeleteBtnClicked) ] [ HH.text "Delete" ]
               ]
           ]
