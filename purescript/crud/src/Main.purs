@@ -2,14 +2,13 @@ module Main (main) where
 
 import Prelude
 
-import Data.Array ((!!))
+import Data.Array (deleteAt, length, (!!))
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
 import Effect.Class (class MonadEffect)
 import Effect.Class.Console (log)
-import Halogen (PropName(..))
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML (IProp, prop)
@@ -23,18 +22,32 @@ main = HA.runHalogenAff do
   body <- HA.awaitBody
   runUI component unit body
 
-type State =
+data Data = Loaded (Array Person)
+
+derive instance Generic Data _
+
+instance Show Data where
+  show = genericShow
+
+type Form =
   { term :: String
   , firstName :: String
   , lastName :: String
   , selectedPersonIdx :: Int
   }
 
+type State =
+  { data :: Data
+  , form :: Form
+  }
+
 data Action
-  = TermChanged String
+  = Initialize
+  | TermChanged String
   | FirstNameChanged String
   | LastNameChanged String
   | PersonSelected Int
+  | DeleteBtnClicked
 
 derive instance Generic Action _
 
@@ -47,72 +60,126 @@ type Person =
   , lastName :: String
   }
 
-db :: Array Person
-db =
-  [ { id: 1
-    , firstName: "John"
-    , lastName: "Doe"
-    }
-  , { id: 2
-    , firstName: "Jane"
-    , lastName: "Doe"
-    }
-  , { id: 3
-    , firstName: "Bob"
-    , lastName: "Smith"
-    }
-  ]
-
 size :: forall r i. Int -> IProp (size :: Int | r) i
-size = prop (PropName "size")
+size = prop (H.PropName "size")
 
 component :: forall query output m. MonadEffect m => H.Component query Unit output m
 component =
   H.mkComponent
     { initialState
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval $ H.defaultEval
+        { handleAction = handleAction
+        , initialize = Just Initialize
+        }
     , render
     }
   where
   initialState :: Unit -> State
   initialState _ =
-    { term: ""
-    , firstName: ""
-    , lastName: ""
-    , selectedPersonIdx: 1
-    }
+    let
+      initialDb :: Array Person
+      initialDb =
+        [ { id: 1
+          , firstName: "John"
+          , lastName: "Doe"
+          }
+        , { id: 2
+          , firstName: "Jane"
+          , lastName: "Doe"
+          }
+        , { id: 3
+          , firstName: "Bob"
+          , lastName: "Smith"
+          }
+        , { id: 4
+          , firstName: "Alice"
+          , lastName: "Smith"
+          }
+        ]
+    in
+      { data: Loaded initialDb
+      , form:
+          { term: ""
+          , firstName: ""
+          , lastName: ""
+          , selectedPersonIdx: 1
+          }
+      }
 
   handleAction :: Action -> H.HalogenM State Action () output m Unit
   handleAction action = do
     log $ "Action: " <> show action
     case action of
-      TermChanged str -> H.modify_ _ { term = str }
-      FirstNameChanged str -> H.modify_ _ { firstName = str }
-      LastNameChanged str -> H.modify_ _ { lastName = str }
+      Initialize ->
+        H.get >>= \state ->
+          handleAction $ PersonSelected state.form.selectedPersonIdx
+      TermChanged str ->
+        H.modify_ _ { form { term = str } }
+
+      FirstNameChanged str ->
+        H.modify_ _ { form { firstName = str } }
+
+      LastNameChanged str ->
+        H.modify_ _ { form { lastName = str } }
+
       PersonSelected i ->
+        H.modify_
+          \state ->
+            case state.data of
+              Loaded db ->
+                case db !! i of
+                  Nothing ->
+                    state { form { selectedPersonIdx = i } }
+                  Just person ->
+                    state
+                      { form
+                          { selectedPersonIdx = i
+                          , firstName = person.firstName
+                          , lastName = person.lastName
+                          }
+                      }
+      DeleteBtnClicked -> do
         H.modify_ \state ->
-          case db !! i of
-            Nothing ->
-              state { selectedPersonIdx = i }
-            Just person ->
-              state
-                { selectedPersonIdx = i
-                , firstName = person.firstName
-                , lastName = person.lastName
-                }
+          case state.data of
+            Loaded db ->
+              let
+                newDb :: Array Person
+                newDb =
+                  fromMaybe db $
+                    deleteAt (state.form.selectedPersonIdx) db
+
+              in
+                state { data = Loaded newDb }
+
+        state <- H.get
+        case state.data of
+          Loaded db ->
+            handleAction
+              $ PersonSelected
+              $ min
+                  (max 0 $ length db - 1)
+                  state.form.selectedPersonIdx
 
   render :: State -> H.ComponentHTML Action () m
   render state =
     HH.div_
-      [ HH.code_ [ HH.text $ show state ]
-      , HH.h1_ [ HH.text "CRUD example" ]
-      , HH.div [ HP.id "form" ]
+      [ HH.h1_ [ HH.text "CRUD example" ]
+      , case state.data of
+          Loaded db ->
+            renderLoaded db state.form
+      , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
+      ]
+
+  renderLoaded :: Array Person -> Form -> H.ComponentHTML Action () m
+  renderLoaded db form =
+    HH.div_
+      [ HH.div [ HP.id "form" ]
           [ HH.div_
               [ HH.div [ HP.classes [ H.ClassName "left" ] ]
                   [ HH.div [ HP.id "prefix-section" ]
                       [ HH.label_ [ HH.text "Filter prefix:" ]
                       , HH.input
-                          [ HP.value state.term
+                          [ HP.value form.term
                           -- , HE.onValueChange TermChanged -- changes on blur
                           , HE.onValueInput TermChanged
                           ]
@@ -121,7 +188,8 @@ component =
                       [ HH.select
                           [ size 8
                           , HE.onSelectedIndexChange PersonSelected
-                          , HP.selectedIndex state.selectedPersonIdx
+                          , HP.selectedIndex form.selectedPersonIdx
+                          , HP.autofocus true
                           ]
                           ( map
                               ( \person -> HH.option_
@@ -137,14 +205,14 @@ component =
                   [ HH.div_
                       [ HH.label_ [ HH.text "Name:" ]
                       , HH.input
-                          [ HP.value state.firstName
+                          [ HP.value form.firstName
                           , HE.onValueInput FirstNameChanged
                           ]
                       ]
                   , HH.div_
                       [ HH.label_ [ HH.text "Surname:" ]
                       , HH.input
-                          [ HP.value state.lastName
+                          [ HP.value form.lastName
                           , HE.onValueInput LastNameChanged
                           ]
                       ]
@@ -155,7 +223,7 @@ component =
           , HH.div [ HP.id "buttons" ]
               [ HH.button [] [ HH.text "Create" ]
               , HH.button [] [ HH.text "Update" ]
-              , HH.button [] [ HH.text "Delete" ]
+              , HH.button [ HE.onClick (const DeleteBtnClicked) ] [ HH.text "Delete" ]
               ]
           ]
       ]

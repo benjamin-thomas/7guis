@@ -69,6 +69,11 @@ body {
     width: 100%;
 }
 
+#people>select {
+    /* Prevents a vertical jitter when deleting the last item */
+    height: 150px;
+}
+
 #people select:focus {
     outline: none;
 }
