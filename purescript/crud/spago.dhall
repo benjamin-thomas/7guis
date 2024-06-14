@@ -1,5 +1,6 @@
 { name = "halogen-project"
-, dependencies = [ "effect", "halogen", "prelude" ]
+, dependencies =
+  [ "arrays", "console", "effect", "halogen", "maybe", "prelude" ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs" ]
 }
