@@ -7,6 +7,7 @@
   , "halogen"
   , "maybe"
   , "prelude"
+  , "strings"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs" ]

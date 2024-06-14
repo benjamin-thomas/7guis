@@ -1,12 +1,16 @@
-module Main (main) where
+module Main
+  ( main
+  , startsWith
+  ) where
 
 import Prelude
 
-import Data.Array (deleteAt, length, modifyAt, snoc, (!!))
+import Data.Array (deleteAt, filter, length, modifyAt, snoc, (!!))
 import Data.Foldable (maximumBy)
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Show.Generic (genericShow)
+import Data.String (Pattern(..), stripPrefix, toLower)
 import Effect (Effect)
 import Effect.Class (class MonadEffect)
 import Effect.Class.Console (log)
@@ -62,6 +66,9 @@ type Person =
   , firstName :: String
   , lastName :: String
   }
+
+startsWith :: String -> String -> Boolean
+startsWith pat term = isJust $ stripPrefix (Pattern $ toLower pat) (toLower term)
 
 size :: forall r i. Int -> IProp (size :: Int | r) i
 size = prop (H.PropName "size")
@@ -210,7 +217,10 @@ component =
       [ HH.h1_ [ HH.text "CRUD example" ]
       , case state.data of
           Loaded db ->
-            renderLoaded db state.form
+            let
+              filteredDb = filter (\person -> startsWith state.form.term person.firstName) db
+            in
+              renderLoaded filteredDb state.form
       , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
       ]
 
