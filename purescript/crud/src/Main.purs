@@ -2,7 +2,8 @@ module Main (main) where
 
 import Prelude
 
-import Data.Array (deleteAt, length, modifyAt, (!!))
+import Data.Array (deleteAt, length, modifyAt, snoc, (!!))
+import Data.Foldable (maximumBy)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Show.Generic (genericShow)
@@ -47,6 +48,7 @@ data Action
   | FirstNameChanged String
   | LastNameChanged String
   | PersonSelected Int
+  | CreateBtnClicked
   | UpdateBtnClicked
   | DeleteBtnClicked
 
@@ -140,6 +142,26 @@ component =
                           , lastName = person.lastName
                           }
                       }
+
+      CreateBtnClicked ->
+        H.modify_ \state ->
+          case state.data of
+            Loaded db ->
+              let
+                maxId :: Maybe Int
+                maxId = _.id <$> maximumBy (\a b -> compare (a.id) (b.id)) db
+
+                newId :: Int
+                newId = fromMaybe 1 $ ((+) 1) <$> maxId
+
+                newDb :: Array Person
+                newDb = snoc db
+                  { id: newId
+                  , firstName: state.form.firstName
+                  , lastName: state.form.lastName
+                  }
+              in
+                state { data = Loaded newDb, form { selectedPersonIdx = newId - 1 } }
 
       UpdateBtnClicked ->
         H.modify_ \state ->
@@ -243,7 +265,7 @@ component =
               ]
 
           , HH.div [ HP.id "buttons" ]
-              [ HH.button [] [ HH.text "Create" ]
+              [ HH.button [ HE.onClick (const CreateBtnClicked) ] [ HH.text "Create" ]
               , HH.button [ HE.onClick (const UpdateBtnClicked) ] [ HH.text "Update" ]
               , HH.button [ HE.onClick (const DeleteBtnClicked) ] [ HH.text "Delete" ]
               ]
