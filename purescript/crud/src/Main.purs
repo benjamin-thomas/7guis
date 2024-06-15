@@ -48,8 +48,7 @@ type State =
   }
 
 data Action
-  = Initialize
-  | TermChanged String
+  = TermChanged String
   | FirstNameChanged String
   | LastNameChanged String
   | PersonSelected String
@@ -82,7 +81,6 @@ component =
     { initialState
     , eval: H.mkEval $ H.defaultEval
         { handleAction = handleAction
-        , initialize = Just Initialize
         }
     , render
     }
@@ -90,17 +88,17 @@ component =
   initialState :: Unit -> State
   initialState _ =
     let
-      firstPerson = (Tuple 1 ({ firstName: "John", lastName: "Doe" }))
+      firstPerson = Tuple 1 { firstName: "John", lastName: "Doe" }
 
       initialDb :: Map Int Person
       initialDb = M.fromFoldable
         [ firstPerson
-        , (Tuple 2 ({ firstName: "Jane", lastName: "Doe" }))
-        , (Tuple 3 ({ firstName: "Joe", lastName: "Smith" }))
-        , (Tuple 4 ({ firstName: "Bill", lastName: "Carpenter" }))
-        , (Tuple 5 ({ firstName: "Mark", lastName: "Thompson" }))
-        , (Tuple 6 ({ firstName: "Jill", lastName: "Valentine" }))
-        , (Tuple 7 ({ firstName: "Zak", lastName: "Wylde" }))
+        , Tuple 2 { firstName: "Jane", lastName: "Doe" }
+        , Tuple 3 { firstName: "Joe", lastName: "Smith" }
+        , Tuple 4 { firstName: "Bill", lastName: "Carpenter" }
+        , Tuple 5 { firstName: "Mark", lastName: "Thompson" }
+        , Tuple 6 { firstName: "Jill", lastName: "Valentine" }
+        , Tuple 7 { firstName: "Zak", lastName: "Wylde" }
         ]
     in
       { data: Loaded initialDb
@@ -116,10 +114,6 @@ component =
   handleAction action = do
     log $ "Action: " <> show action
     case action of
-      Initialize ->
-        H.get >>= \state ->
-          handleAction $ PersonSelected $ show state.form.selectedPersonId
-
       TermChanged str ->
         H.modify_ _ { form { term = str } }
 
@@ -129,42 +123,27 @@ component =
       LastNameChanged str ->
         H.modify_ _ { form { lastName = str } }
 
-      PersonSelected strId ->
-        H.modify_
-          \state ->
-            case fromString strId of
-              Nothing -> state
-              Just id ->
-                case state.data of
-                  Loaded db ->
-                    case M.lookup id db of
-                      Nothing ->
-                        state
-                          { form
-                              { selectedPersonId = Nothing
-                              , firstName = ""
-                              , lastName = ""
-                              }
-                          }
-                      Just person ->
-                        state
-                          { form
-                              { selectedPersonId = Just id
-                              , firstName = person.firstName
-                              , lastName = person.lastName
-                              }
-                          }
-      -- Playing with syntax...
-      -- H.modify_ \state ->
-      --   fromMaybe state $
-      --     db !! i <#> \person ->
-      --       state
-      --         { form
-      --             { selectedPersonIdx = i
-      --             , firstName = person.firstName
-      --             , lastName = person.lastName
-      --             }
-      --         }
+      PersonSelected strId -> H.modify_ \state ->
+        fromMaybe state $ (fromString strId) <#> \id ->
+          case state.data of
+            Loaded db ->
+              case M.lookup id db of
+                Nothing ->
+                  state
+                    { form
+                        { selectedPersonId = Nothing
+                        , firstName = ""
+                        , lastName = ""
+                        }
+                    }
+                Just person ->
+                  state
+                    { form
+                        { selectedPersonId = Just id
+                        , firstName = person.firstName
+                        , lastName = person.lastName
+                        }
+                    }
 
       CreateBtnClicked ->
         H.modify_ \state ->
@@ -182,7 +161,6 @@ component =
                   { firstName: state.form.firstName
                   , lastName: state.form.lastName
                   }
-
               in
                 state
                   { data = Loaded newDb
