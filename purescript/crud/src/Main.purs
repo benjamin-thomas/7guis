@@ -1,6 +1,5 @@
 module Main
   ( main
-  , startsWith
   ) where
 
 import Prelude
@@ -67,8 +66,11 @@ type Person =
   , lastName :: String
   }
 
-startsWith :: String -> String -> Boolean
-startsWith pat term = isJust $ stripPrefix (Pattern $ toLower pat) (toLower term)
+filterDb :: String -> Array Person -> Array Person
+filterDb term = filter (\person -> startsWith term person.firstName)
+  where
+  startsWith :: String -> String -> Boolean
+  startsWith pat src = isJust $ stripPrefix (Pattern $ toLower pat) (toLower src)
 
 size :: forall r i. Int -> IProp (size :: Int | r) i
 size = prop (H.PropName "size")
@@ -140,7 +142,13 @@ component =
               Loaded db ->
                 case db !! i of
                   Nothing ->
-                    state { form { selectedPersonIdx = i } }
+                    state
+                      { form
+                          { selectedPersonIdx = -1
+                          , firstName = ""
+                          , lastName = ""
+                          }
+                      }
                   Just person ->
                     state
                       { form
@@ -149,6 +157,16 @@ component =
                           , lastName = person.lastName
                           }
                       }
+      -- Playing with syntax...
+      -- fromMaybe state $
+      --   db !! i <#> \person ->
+      --     state
+      --       { form
+      --           { selectedPersonIdx = i
+      --           , firstName = person.firstName
+      --           , lastName = person.lastName
+      --           }
+      --       }
 
       CreateBtnClicked ->
         H.modify_ \state ->
@@ -217,10 +235,7 @@ component =
       [ HH.h1_ [ HH.text "CRUD example" ]
       , case state.data of
           Loaded db ->
-            let
-              filteredDb = filter (\person -> startsWith state.form.term person.firstName) db
-            in
-              renderLoaded filteredDb state.form
+            renderLoaded (filterDb state.form.term db) state.form
       , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
       ]
 
