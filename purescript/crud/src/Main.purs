@@ -4,12 +4,14 @@ module Main
 
 import Prelude
 
-import Data.Array (deleteAt, filter, length, modifyAt, snoc, (!!))
-import Data.Foldable (maximumBy)
 import Data.Generic.Rep (class Generic)
+import Data.Int (fromString)
+import Data.Map (Map)
+import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), stripPrefix, toLower)
+import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
 import Effect.Class (class MonadEffect)
 import Effect.Class.Console (log)
@@ -26,7 +28,7 @@ main = HA.runHalogenAff do
   body <- HA.awaitBody
   runUI component unit body
 
-data Data = Loaded (Array Person)
+data Data = Loaded (Map Int Person)
 
 derive instance Generic Data _
 
@@ -37,7 +39,7 @@ type Form =
   { term :: String
   , firstName :: String
   , lastName :: String
-  , selectedPersonIdx :: Int
+  , selectedPersonId :: Maybe Int
   }
 
 type State =
@@ -50,7 +52,7 @@ data Action
   | TermChanged String
   | FirstNameChanged String
   | LastNameChanged String
-  | PersonSelected Int
+  | PersonSelected String
   | CreateBtnClicked
   | UpdateBtnClicked
   | DeleteBtnClicked
@@ -61,13 +63,12 @@ instance Show Action where
   show = genericShow
 
 type Person =
-  { id :: Int
-  , firstName :: String
+  { firstName :: String
   , lastName :: String
   }
 
-filterDb :: String -> Array Person -> Array Person
-filterDb term = filter (\person -> startsWith term person.firstName)
+filterDb :: String -> Map Int Person -> Map Int Person
+filterDb term = M.filter (\person -> startsWith term person.firstName)
   where
   startsWith :: String -> String -> Boolean
   startsWith pat src = isJust $ stripPrefix (Pattern $ toLower pat) (toLower src)
@@ -89,32 +90,25 @@ component =
   initialState :: Unit -> State
   initialState _ =
     let
-      initialDb :: Array Person
-      initialDb =
-        [ { id: 1
-          , firstName: "John"
-          , lastName: "Doe"
-          }
-        , { id: 2
-          , firstName: "Jane"
-          , lastName: "Doe"
-          }
-        , { id: 3
-          , firstName: "Bob"
-          , lastName: "Smith"
-          }
-        , { id: 4
-          , firstName: "Alice"
-          , lastName: "Smith"
-          }
+      firstPerson = (Tuple 1 ({ firstName: "John", lastName: "Doe" }))
+
+      initialDb :: Map Int Person
+      initialDb = M.fromFoldable
+        [ firstPerson
+        , (Tuple 2 ({ firstName: "Jane", lastName: "Doe" }))
+        , (Tuple 3 ({ firstName: "Joe", lastName: "Smith" }))
+        , (Tuple 4 ({ firstName: "Bill", lastName: "Carpenter" }))
+        , (Tuple 5 ({ firstName: "Mark", lastName: "Thompson" }))
+        , (Tuple 6 ({ firstName: "Jill", lastName: "Valentine" }))
+        , (Tuple 7 ({ firstName: "Zak", lastName: "Wylde" }))
         ]
     in
       { data: Loaded initialDb
       , form:
           { term: ""
-          , firstName: ""
-          , lastName: ""
-          , selectedPersonIdx: 1
+          , firstName: (snd firstPerson).firstName
+          , lastName: (snd firstPerson).lastName
+          , selectedPersonId: (Just $ fst firstPerson)
           }
       }
 
@@ -124,7 +118,7 @@ component =
     case action of
       Initialize ->
         H.get >>= \state ->
-          handleAction $ PersonSelected state.form.selectedPersonIdx
+          handleAction $ PersonSelected $ show state.form.selectedPersonId
 
       TermChanged str ->
         H.modify_ _ { form { term = str } }
@@ -135,38 +129,42 @@ component =
       LastNameChanged str ->
         H.modify_ _ { form { lastName = str } }
 
-      PersonSelected i ->
+      PersonSelected strId ->
         H.modify_
           \state ->
-            case state.data of
-              Loaded db ->
-                case db !! i of
-                  Nothing ->
-                    state
-                      { form
-                          { selectedPersonIdx = -1
-                          , firstName = ""
-                          , lastName = ""
+            case fromString strId of
+              Nothing -> state
+              Just id ->
+                case state.data of
+                  Loaded db ->
+                    case M.lookup id db of
+                      Nothing ->
+                        state
+                          { form
+                              { selectedPersonId = Nothing
+                              , firstName = ""
+                              , lastName = ""
+                              }
                           }
-                      }
-                  Just person ->
-                    state
-                      { form
-                          { selectedPersonIdx = i
-                          , firstName = person.firstName
-                          , lastName = person.lastName
+                      Just person ->
+                        state
+                          { form
+                              { selectedPersonId = Just id
+                              , firstName = person.firstName
+                              , lastName = person.lastName
+                              }
                           }
-                      }
       -- Playing with syntax...
-      -- fromMaybe state $
-      --   db !! i <#> \person ->
-      --     state
-      --       { form
-      --           { selectedPersonIdx = i
-      --           , firstName = person.firstName
-      --           , lastName = person.lastName
-      --           }
-      --       }
+      -- H.modify_ \state ->
+      --   fromMaybe state $
+      --     db !! i <#> \person ->
+      --       state
+      --         { form
+      --             { selectedPersonIdx = i
+      --             , firstName = person.firstName
+      --             , lastName = person.lastName
+      --             }
+      --         }
 
       CreateBtnClicked ->
         H.modify_ \state ->
@@ -174,60 +172,78 @@ component =
             Loaded db ->
               let
                 maxId :: Maybe Int
-                maxId = _.id <$> maximumBy (\a b -> compare (a.id) (b.id)) db
+                maxId = _.key <$> M.findMax db
 
                 newId :: Int
                 newId = fromMaybe 1 $ ((+) 1) <$> maxId
 
-                newDb :: Array Person
-                newDb = snoc db
-                  { id: newId
-                  , firstName: state.form.firstName
+                newDb :: Map Int Person
+                newDb = db # M.insert newId
+                  { firstName: state.form.firstName
                   , lastName: state.form.lastName
                   }
+
               in
-                state { data = Loaded newDb, form { selectedPersonIdx = newId - 1 } }
+                state
+                  { data = Loaded newDb
+                  , form { selectedPersonId = Just $ newId }
+                  }
 
       UpdateBtnClicked ->
         H.modify_ \state ->
-          case state.data of
-            Loaded db ->
-              let
-                newDb :: Array Person
-                newDb =
-                  fromMaybe db $
-                    modifyAt
-                      (state.form.selectedPersonIdx)
-                      ( _
-                          { firstName = state.form.firstName
-                          , lastName = state.form.lastName
-                          }
-                      )
-                      db
-              in
-                state { data = Loaded newDb }
+          case state.form.selectedPersonId of
+            Nothing -> state
+            Just selectedPersonId ->
+              case state.data of
+                Loaded db ->
+                  let
+                    newDb :: Map Int Person
+                    newDb =
+                      db # M.insert
+                        selectedPersonId
+                        { firstName: state.form.firstName
+                        , lastName: state.form.lastName
+                        }
+
+                  in
+                    state { data = Loaded newDb }
 
       DeleteBtnClicked -> do
         H.modify_ \state ->
-          case state.data of
-            Loaded db ->
-              let
-                newDb :: Array Person
-                newDb =
-                  fromMaybe db $
-                    deleteAt (state.form.selectedPersonIdx) db
+          case state.form.selectedPersonId of
+            Nothing -> state
+            Just selectedPersonId ->
+              case state.data of
+                Loaded db ->
+                  let
+                    newDb :: Map Int Person
+                    newDb =
+                      db # M.delete selectedPersonId
 
-              in
-                state { data = Loaded newDb }
+                    firstPerson :: Maybe { key :: Int, value :: Person }
+                    firstPerson = M.findMin (filterDb state.form.term newDb)
 
-        state <- H.get
-        case state.data of
-          Loaded db ->
-            handleAction
-              $ PersonSelected
-              $ min
-                  (max 0 $ length db - 1)
-                  state.form.selectedPersonIdx
+                  in
+                    case firstPerson of
+                      Nothing ->
+                        state
+                          { data = Loaded newDb
+                          , form
+                              { selectedPersonId = Nothing
+                              , firstName = ""
+                              , lastName = ""
+                              }
+                          }
+                      Just { key, value } ->
+                        state
+                          { data = Loaded newDb
+                          , form
+                              { selectedPersonId = Just key
+                              , firstName = value.firstName
+                              , lastName = value.lastName
+                              }
+
+                          }
 
   render :: State -> H.ComponentHTML Action () m
   render state =
@@ -239,7 +255,7 @@ component =
       , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
       ]
 
-  renderLoaded :: Array Person -> Form -> H.ComponentHTML Action () m
+  renderLoaded :: Map Int Person -> Form -> H.ComponentHTML Action () m
   renderLoaded db form =
     HH.div_
       [ HH.div [ HP.id "form" ]
@@ -256,16 +272,19 @@ component =
                   , HH.div [ HP.id "people" ]
                       [ HH.select
                           [ size 8
-                          , HE.onSelectedIndexChange PersonSelected
-                          , HP.selectedIndex form.selectedPersonIdx
+                          , HE.onValueChange PersonSelected
                           , HP.autofocus true
                           ]
                           ( map
-                              ( \person -> HH.option_
-                                  [ HH.text $ person.firstName <> " " <> person.lastName
-                                  ]
+                              ( \(Tuple personId person) ->
+                                  HH.option
+                                    [ HP.value $ show personId
+                                    , HP.selected $ Just personId == form.selectedPersonId
+                                    ]
+                                    [ HH.text $ person.firstName <> " " <> person.lastName
+                                    ]
                               )
-                              db
+                              (M.toUnfoldable db)
                           )
                       ]
                   ]
