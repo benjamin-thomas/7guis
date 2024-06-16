@@ -63,6 +63,7 @@ data Action
   | CircleRadiusChanged { circleId :: Int } String
   | MouseReleased
   | UndoBtnClicked
+  | RedoBtnClicked
 
 onContextMenu :: forall r i. (WE.Event -> i) -> HP.IProp r i
 onContextMenu = HE.handler (WE.EventType "contextmenu")
@@ -157,16 +158,40 @@ component =
     UndoBtnClicked ->
       H.modify_ \state ->
         let
+          past :: List (Map Int Circle)
+          past = fromMaybe List.Nil $ tail state.history.past
+
           current :: Map Int Circle
           current = fromMaybe state.history.current $ head state.history.past
 
-          past :: List (Map Int Circle)
-          past = fromMaybe List.Nil $ tail state.history.past
+          future :: List (Map Int Circle)
+          future = state.history.current : state.history.future
         in
           state
             { history
-                { current = current
-                , past = past
+                { past = past
+                , current = current
+                , future = future
+                }
+            }
+
+    RedoBtnClicked ->
+      H.modify_ \state ->
+        let
+          past :: List (Map Int Circle)
+          past = state.history.current : state.history.past
+
+          current :: Map Int Circle
+          current = fromMaybe state.history.current $ head state.history.future
+
+          future :: List (Map Int Circle)
+          future = fromMaybe List.Nil $ tail state.history.future
+        in
+          state
+            { history
+                { past = past
+                , current = current
+                , future = future
                 }
             }
 
@@ -193,7 +218,7 @@ component =
         [ HH.h1_ [ HH.text "Circle drawer" ]
         , HH.div [ HP.id "buttons" ]
             [ HH.button [ HE.onClick $ const UndoBtnClicked ] [ HH.text "Undo" ]
-            , HH.button_ [ HH.text "Redo" ]
+            , HH.button [ HE.onClick $ const RedoBtnClicked ] [ HH.text "Redo" ]
             ]
 
         , SE.svg
@@ -228,12 +253,4 @@ component =
 
                       ]
                   ]
-
-        , HH.div []
-            [ HH.p_ [ HH.text "history" ]
-            , HH.code_ [ HH.text $ show state.history.current ]
-            , HH.br_
-            , HH.br_
-            , HH.code_ [ HH.text $ show state.history.past ]
-            ]
         ]
