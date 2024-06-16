@@ -1,8 +1,12 @@
 #container {
     background-color: rgb(240, 240, 240);
     max-width: 500px;
-    margin: auto;
+    margin: 40px auto;
     padding-bottom: 30px;
+    position: relative;
+    border-radius: 7px;
+    border: 1px solid lightgrey;
+    box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
 }
 
 #container h1 {
@@ -25,4 +29,24 @@
     width: 400px;
     height: 400px;
     border: 1px solid black;
+}
+
+#adjust-dialog {
+    position: absolute;
+    background-color: white;
+    bottom: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid lightgrey;
+    padding: 20px 6px;
+    width: 330px;
+    box-sizing: border-box;
+    text-align: center;
+    border-radius: 3px;
+    box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+}
+
+#adjust-dialog input {
+    margin-top: 12px;
+    width: 60%;
 }

@@ -9,6 +9,7 @@
   , "numbers"
   , "prelude"
   , "tuples"
+  , "web-events"
   , "web-uievents"
   ]
 , packages = ./packages.dhall
