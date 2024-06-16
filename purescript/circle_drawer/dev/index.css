@@ -1,0 +1,28 @@
+#container {
+    background-color: rgb(240, 240, 240);
+    max-width: 500px;
+    margin: auto;
+    padding-bottom: 30px;
+}
+
+#container h1 {
+    padding-top: 10px;
+    text-align: center;
+}
+
+#buttons {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#buttons button {
+    margin: 0 10px;
+}
+
+#container svg {
+    margin: auto;
+    display: block;
+    width: 400px;
+    height: 400px;
+    border: 1px solid black;
+}
