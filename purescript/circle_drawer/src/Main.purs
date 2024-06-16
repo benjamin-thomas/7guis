@@ -4,6 +4,8 @@ import Prelude
 
 import Data.Int (decimal, toNumber)
 import Data.Int as Int
+import Data.List (List, head, tail, (:))
+import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromJust, fromMaybe)
@@ -45,7 +47,11 @@ type CircleClickData =
 type State =
   { mouseX :: Int
   , mouseY :: Int
-  , circles :: Map Int Circle
+  , history ::
+      { past :: List (Map Int Circle)
+      , current :: Map Int Circle
+      , future :: List (Map Int Circle)
+      }
   , showAdjustDialog :: Maybe CircleClickData
   , defaultCircleRadius :: Number
   }
@@ -56,6 +62,7 @@ data Action
   | MouseRightBtnClicked CircleClickData WE.Event
   | CircleRadiusChanged { circleId :: Int } String
   | MouseReleased
+  | UndoBtnClicked
 
 onContextMenu :: forall r i. (WE.Event -> i) -> HP.IProp r i
 onContextMenu = HE.handler (WE.EventType "contextmenu")
@@ -83,11 +90,11 @@ component =
     in
       { mouseX: 0
       , mouseY: 0
-      , circles:
-          Map.fromFoldable
-            [ 1 /\ { x: 20.0, y: 20.0, r: defaultCircleRadius }
-            , 2 /\ { x: 380.0, y: 380.0, r: defaultCircleRadius }
-            ]
+      , history:
+          { past: List.Nil
+          , current: Map.empty
+          , future: List.Nil
+          }
       , showAdjustDialog: Nothing
       , defaultCircleRadius
       }
@@ -104,38 +111,64 @@ component =
       H.modify_ \state ->
         let
           nextId :: Int
-          nextId = fromMaybe 1 $ Map.findMax state.circles <#> _.key <#> ((+) 1)
+          nextId = fromMaybe 1 $ Map.findMax state.history.current <#> _.key <#> ((+) 1)
 
           newCircles :: Map Int Circle
-          newCircles = state.circles # Map.insert nextId
+          newCircles = state.history.current # Map.insert nextId
             { x: toNumber state.mouseX
             , y: toNumber state.mouseY
             , r: state.defaultCircleRadius
             }
         in
           state
-            { circles = newCircles
+            { history
+                { past = state.history.current : state.history.past
+                , current = newCircles
+                }
             }
 
     MouseRightBtnClicked circleData evt -> do
       H.liftEffect $ WE.preventDefault evt
-      H.modify_ _ { showAdjustDialog = Just circleData }
+      H.modify_ \state -> state
+        { showAdjustDialog = Just circleData
+        , history { past = state.history.current : state.history.past }
+        }
 
     CircleRadiusChanged { circleId } str ->
       H.modify_ \state ->
-        case state.circles # Map.lookup circleId of
+        case state.history.current # Map.lookup circleId of
           Nothing -> state
           Just circle ->
             let
               r = unsafePartial fromJust $ Number.fromString str
               newCircle = circle { r = r }
+
+              current :: Map Int Circle
+              current = state.history.current # Map.insert circleId newCircle
             in
-              state
-                { circles = state.circles # Map.insert circleId newCircle
-                }
+
+              state { history { current = current } }
 
     MouseReleased ->
-      H.modify_ _ { showAdjustDialog = Nothing }
+      H.modify_ \state -> state
+        { showAdjustDialog = Nothing
+        }
+
+    UndoBtnClicked ->
+      H.modify_ \state ->
+        let
+          current :: Map Int Circle
+          current = fromMaybe state.history.current $ head state.history.past
+
+          past :: List (Map Int Circle)
+          past = fromMaybe List.Nil $ tail state.history.past
+        in
+          state
+            { history
+                { current = current
+                , past = past
+                }
+            }
 
   render :: State -> H.ComponentHTML Action () m
   render state =
@@ -159,7 +192,7 @@ component =
       HH.div [ HP.id "container" ]
         [ HH.h1_ [ HH.text "Circle drawer" ]
         , HH.div [ HP.id "buttons" ]
-            [ HH.button_ [ HH.text "Undo" ]
+            [ HH.button [ HE.onClick $ const UndoBtnClicked ] [ HH.text "Undo" ]
             , HH.button_ [ HH.text "Redo" ]
             ]
 
@@ -168,7 +201,7 @@ component =
             , HE.onClick $ const DrawingAreaClicked
             , HP.style "background:white"
             ]
-            (map mkCircle $ Map.toUnfoldable state.circles)
+            (map mkCircle $ Map.toUnfoldable state.history.current)
 
         , case state.showAdjustDialog of
             Nothing -> HH.text ""
@@ -196,5 +229,11 @@ component =
                       ]
                   ]
 
-        , HH.code_ [ HH.text $ show state ]
+        , HH.div []
+            [ HH.p_ [ HH.text "history" ]
+            , HH.code_ [ HH.text $ show state.history.current ]
+            , HH.br_
+            , HH.br_
+            , HH.code_ [ HH.text $ show state.history.past ]
+            ]
         ]

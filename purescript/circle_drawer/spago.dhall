@@ -5,6 +5,7 @@
   , "halogen"
   , "halogen-svg-elems"
   , "integers"
+  , "lists"
   , "maybe"
   , "numbers"
   , "ordered-collections"
