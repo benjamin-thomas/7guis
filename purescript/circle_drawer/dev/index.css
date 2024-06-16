@@ -32,12 +32,12 @@
     border-radius: 2px;
 }
 
+
 #adjust-dialog {
     position: absolute;
     background-color: white;
-    bottom: 150px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(180px);
     border: 1px solid lightgrey;
     padding: 20px 6px;
     width: 330px;

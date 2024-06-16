@@ -236,7 +236,7 @@ component =
                 conv n = Int.fromNumber n <#> Int.toStringAs decimal # fromMaybe "?"
                 coords = "(" <> conv circle.x <> ", " <> conv circle.y <> ")"
               in
-                HH.div [ HP.id "adjust-dialog" ]
+                HH.div [ HP.id "adjust-dialog", HP.style $ "top:" <> conv circle.y <> "px" ]
                   [ HH.div_
                       [ HH.text $ "Adjust diameter of circle at " <> coords <> "."
                       ]
