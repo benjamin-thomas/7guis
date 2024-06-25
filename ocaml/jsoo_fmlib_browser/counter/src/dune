@@ -1,4 +1,0 @@
-(executable
- (name main)
- (libraries fmlib_browser)
- (modes js))

@@ -1,3 +1,0 @@
-(executables
- (names counter_oo counter_fp)
- (libraries lablgtk3))

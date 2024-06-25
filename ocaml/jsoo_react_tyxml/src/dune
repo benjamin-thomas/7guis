@@ -1,6 +1,0 @@
-(executable
- (name main)
- (libraries js_of_ocaml js_of_ocaml-tyxml)
- (preprocess
-  (pps js_of_ocaml-ppx))
- (modes js))

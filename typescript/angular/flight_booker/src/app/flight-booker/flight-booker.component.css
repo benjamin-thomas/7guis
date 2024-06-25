@@ -1,9 +1,0 @@
-form {
-  display: flex;
-  flex-direction: column;
-  max-width: 160px;
-}
-
-input.ng-invalid {
-  background-color: red;
-}

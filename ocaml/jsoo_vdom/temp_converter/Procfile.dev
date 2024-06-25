@@ -1,2 +1,0 @@
-web: live-server --no-browser --host=$(hostname -I | awk '{print $1}') --ignorePattern="\/js\/" ./public/
-compile: find src -name "*.ml" -o -name "*.mli" | entr bash -c 'dune build && touch ./public/index.html'
