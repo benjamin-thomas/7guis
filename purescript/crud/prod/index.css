@@ -1,0 +1,84 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    zoom: 1.4;
+}
+
+#form {
+    border: 1px solid rgb(128, 128, 128);
+    margin: auto;
+    width: 450px;
+    background-color: rgb(240, 240, 240);
+    border-radius: 3px;
+}
+
+#form>div {
+    display: flex;
+    padding: 7px 10px;
+}
+
+/* #form .left,
+#form .right {
+    padding-left: 10px;
+    padding-right: 10px;
+} */
+
+#form .left {
+    padding-right: 7px;
+    /* border: 1px solid blue; */
+    /* width: 50%; */
+}
+
+#form .left input,
+#form .left select {
+    width: 100%;
+}
+
+#form .right {
+    padding-left: 7px;
+    /* border: 1px solid green; */
+    justify-content: center;
+    flex-direction: column;
+    display: flex;
+}
+
+#form .right>div {
+    /* border: 1px solid red; */
+    display: flex;
+    margin: 2px auto;
+    /* width: 100%; */
+}
+
+#form .right label {
+    width: 70%;
+}
+
+#form .right input {
+    width: 130%;
+}
+
+#prefix-section {
+    display: flex;
+    padding: 7px 0;
+}
+
+#prefix-section label {
+    /* 100%: half the width */
+    width: 100%;
+}
+
+#people>select {
+    /* Prevents a vertical jitter when deleting the last item */
+    height: 150px;
+}
+
+#people select:focus {
+    outline: none;
+}
+
+#buttons button {
+    margin-right: 10px;
+    min-width: 85px;
+}
