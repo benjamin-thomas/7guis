@@ -39,11 +39,13 @@ component =
 
   render :: State -> H.ComponentHTML Action () m
   render state =
-    HH.div_
+    HH.div [ HP.id "app" ]
       [ HH.h1_ [ HH.text "Counter example" ]
-      , HH.input
-          [ HP.value $ show state.counter
-          , HP.disabled true
+      , HH.div [ HP.class_ $ HH.ClassName "control" ]
+          [ HH.input
+              [ HP.value $ show state.counter
+              , HP.disabled true
+              ]
+          , HH.button [ HE.onClick \_ -> Inc ] [ HH.text "count" ]
           ]
-      , HH.button [ HE.onClick \_ -> Inc ] [ HH.text "count" ]
       ]

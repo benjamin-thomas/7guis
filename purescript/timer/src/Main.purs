@@ -113,8 +113,8 @@ component =
       (Milliseconds elapsed) = state.elapsed
     in
       HH.div_
-        [ HH.code_ [ HH.text $ show state ]
-        , HH.h1_ [ HH.text "Timer" ]
+        [ -- HH.code_ [ HH.text $ show state ]
+          HH.h1_ [ HH.text "Timer" ]
         , HH.div_
             [ HH.label_ [ HH.text "Elapsed time:" ]
             , HH.meter

@@ -11,7 +11,14 @@
 
 #container h1 {
     padding-top: 10px;
+    margin-bottom: 0;
     text-align: center;
+}
+
+#container>p {
+    text-align: center;
+    font-style: italic;
+    margin-bottom: 20px;
 }
 
 #buttons {

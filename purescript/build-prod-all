@@ -1,0 +1,13 @@
+#!/bin/bash
+
+die() {
+    echo "ERROR: $1"
+    exit 1
+}
+
+for REPO in counter circle_drawer crud flight_booker temp_converter timer; do
+    cd $REPO
+    echo "==> Building $REPO..."
+    npm run build-prod || die "Problem with: $REPO"
+    cd -
+done

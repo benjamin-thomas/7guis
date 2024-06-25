@@ -230,7 +230,7 @@ component =
       , case state.data of
           Loaded db ->
             renderLoaded (filterDb state.form.term db) state.form
-      , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
+      -- , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
       ]
 
   renderLoaded :: Map Int Person -> Form -> H.ComponentHTML Action () m

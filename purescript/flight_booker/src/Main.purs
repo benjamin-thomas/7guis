@@ -293,7 +293,8 @@ component =
     in
       HH.div_
         [ HH.h1_ [ HH.text "Flight Booker" ]
-        , HH.code_ [ HH.text $ show state ]
+        , HH.code_ [ HH.text "Valid date format is: dd.mm.yyyy" ]
+        -- , HH.code_ [ HH.text $ show state ]
         , HH.div [ HP.style "margin-top: 20px" ]
             ( case state.flightOption of
                 OneWayFlight ->

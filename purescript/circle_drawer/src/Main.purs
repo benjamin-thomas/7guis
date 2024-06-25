@@ -216,6 +216,7 @@ component =
     in
       HH.div [ HP.id "container" ]
         [ HH.h1_ [ HH.text "Circle drawer" ]
+        , HH.p_ [ HH.text "Right click to change the diameter" ]
         , HH.div [ HP.id "buttons" ]
             [ HH.button [ HE.onClick $ const UndoBtnClicked ] [ HH.text "Undo" ]
             , HH.button [ HE.onClick $ const RedoBtnClicked ] [ HH.text "Redo" ]
