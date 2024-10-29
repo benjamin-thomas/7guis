@@ -1,0 +1,14 @@
+{
+  "name": "counter",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite dev",
+    "build.off": "spago build && vite build"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10",
+    "spago": "^0.93.40",
+    "purescript": "^0.15.15"
+  }
+}
