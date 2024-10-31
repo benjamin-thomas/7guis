@@ -1,10 +1,10 @@
-module Main where
+module Main (main) where
 
 import Prelude
 
 import Data.Foldable (traverse_)
 import Data.Tuple.Nested ((/\))
-import Deku.Control (text_, text)
+import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
@@ -13,29 +13,27 @@ import Deku.Do as Deku
 import Deku.Hooks (useState)
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Console (log)
 import Web.DOM.Element (setClassName)
 import Web.HTML (window)
 import Web.HTML.HTMLDocument (body)
 import Web.HTML.HTMLElement (toElement)
-import Web.HTML.Window (document)
+import Web.HTML.Location (search)
+import Web.HTML.Window (document, location)
 
 {-
 
+npm install -g pscid vite
+
 Terminal 1:
-  npx pscid
+  pscid
 
 Terminal 2:
-  npx vite dev
+  vite dev
 
- -}
+---
 
-main :: Effect Unit
-main = do
-  setBodyClass "container"
-  void $ runInBody app
-  where
-
-  {-
+NOTE
 
 traversable is like fmap, but with an effect
 
@@ -66,27 +64,52 @@ Prelude> traverse (print . (*2)) (Just 1)
 2
 Just ()
 
-
  -}
 
-  setBodyClass :: String -> Effect Unit
-  setBodyClass klass =
-    window >>= document >>= body >>=
-      traverse_ (toElement >>> setClassName klass)
+setBodyClass :: String -> Effect Unit
+setBodyClass klass =
+  window >>= document >>= body >>=
+    traverse_ (toElement >>> setClassName klass)
 
-  app :: Nut
-  app =
-    Deku.do
-      setCounter /\ counter <- useState 0
+app :: Boolean -> Nut
+app showExtra =
+  Deku.do
+    setCounter /\ counter <- useState 0
 
-      let
-        btn txt f = D.button
-          [ DL.runOn DL.click f <$> counter ]
-          [ text_ txt ]
+    let
+      btn txt f = D.button
+        [ DL.runOn DL.click f <$> counter ]
+        [ text_ txt ]
 
-      D.div [ DA.klass_ "app" ]
-        [ btn "-" (setCounter <<< max 0 <<< (_ - 1))
-        , text $ show <$> counter
-        , btn "+" (setCounter <<< min 5 <<< (_ + 1))
-        ]
+    D.div [ DA.klass_ "app" ]
+      [ D.h1__ "Counter example"
+      , D.span_
+          [ D.input
+              [ DA.disabled_ "true"
+              , DA.value $ show <$> counter
+              ]
+              []
+          , btn "count" (setCounter <<< (_ + 1))
+          ]
+      , if not showExtra then
+          mempty
+        else
+          D.div []
+            [ D.hr [] []
+            , btn "-" (setCounter <<< max 0 <<< (_ - 1))
+            , text $ show <$> counter
+            , btn "+" (setCounter <<< min 5 <<< (_ + 1))
+
+            ]
+      ]
+
+main :: Effect Unit
+main = do
+  setBodyClass "container"
+  window >>= location >>= search >>= \s -> do
+    log $ "search: " <> s
+    if (s == "?extra=1") then
+      void $ runInBody (app true)
+    else
+      void $ runInBody (app false)
 
