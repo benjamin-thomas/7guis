@@ -8,25 +8,10 @@ Terminal 1:
 Terminal 2:
   vite dev
 
+
 ---
 
-whenInt ∷ (Int → Effect Unit) → String → Effect Unit
-whenInt setValue = \c -> do
-  log $ "new value: " <> c
-  case fromString c of
-    Nothing -> pure unit
-    Just n -> setValue n
-
-whenInt ∷ (Int → Effect Unit) → String → Effect Unit
-whenInt setValue = \c -> do
-  log $ "new value: " <> c
-  for_ (Int.fromString c) setValue
-
-
-`traverse_ and `for_` are `mapM` and `forM` in Haskell
-whenInt ∷ (Int → Effect Unit) → String → Effect Unit
-whenInt setValue =
-  traverse_ setValue <<< Int.fromString
+TODO: Use floats, but I don't use Number.fromString since it delegates to crappy JS parseFloat. Rather, use a parser.
 
  -}
 module Main (main) where
@@ -48,13 +33,6 @@ import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import FRP.Poll (Poll)
 
-data LastChanged = Celsius | Fahrenheit
-
-instance Show LastChanged where
-  show = case _ of
-    Celsius -> "Celsius"
-    Fahrenheit -> "Fahrenheit"
-
 fahrenheitToCelsius :: Int → Int
 fahrenheitToCelsius f = (f - 32) * 5 / 9
 
@@ -66,52 +44,37 @@ app =
   Deku.do
     setCelsius /\ celsius <- useState "0"
     setFahrenheit /\ fahrenheit <- useState "32"
-    setLastChanged /\ lastChanged <- useState Celsius
 
     let
       mbCelsius :: Poll (Maybe Int)
       mbCelsius = Int.fromString <$> celsius
 
-      setCelsiusWithChange :: String → Effect Unit
-      setCelsiusWithChange str =
-        setLastChanged Celsius
-          *> setCelsius str
-          *> for_
+      setCelsius' :: String → Effect Unit
+      setCelsius' str =
+        setCelsius str *>
+          for_
             (Int.fromString str)
             (\c -> setFahrenheit $ show $ celsiusToFahrenheit c)
 
       mbFahrenheit :: Poll (Maybe Int)
       mbFahrenheit = fahrenheit <#> Int.fromString
 
-      setFahrenheitWithChange :: String → Effect Unit
-      setFahrenheitWithChange str =
-        setLastChanged Fahrenheit
-          *> setFahrenheit str
-          *> for_
+      setFahrenheit' :: String → Effect Unit
+      setFahrenheit' str =
+        setFahrenheit str *>
+          for_
             (Int.fromString str)
             (\f -> setCelsius $ show $ fahrenheitToCelsius f)
 
       converted :: Poll (Maybe { c :: Int, f :: Int })
-      converted = toCheck <#> case _ of
-        { lc, c: Just c, f: Just f } ->
-          case lc of
-            Celsius -> Just
-              { c
-              , f: celsiusToFahrenheit c
-              }
-            Fahrenheit -> Just
-              { c: fahrenheitToCelsius f
-              , f
-              }
-        _ -> Nothing
+      converted =
+        make
+          <$> mbCelsius
+          <*> mbFahrenheit
         where
-
-        toCheck :: Poll { lc :: LastChanged, c :: Maybe Int, f :: Maybe Int }
-        toCheck =
-          { lc: _, c: _, f: _ }
-            <$> lastChanged
-            <*> mbCelsius
-            <*> mbFahrenheit
+        make a b = case a /\ b of
+          Just c /\ Just f -> Just { c, f }
+          _ -> Nothing
 
     D.div []
       [ D.h1__ "Temp Converter"
@@ -121,7 +84,7 @@ app =
               [ D.label [] [ text_ "Celsius" ]
               , D.input
                   [ DA.value celsius
-                  , DL.valueOn_ DL.input setCelsiusWithChange
+                  , DL.valueOn_ DL.input setCelsius'
 
                   , DA.klass $ mbCelsius <#> maybe "error" mempty
                   ]
@@ -132,7 +95,7 @@ app =
               [ D.label [] [ text_ "Fahrenheit" ]
               , D.input
                   [ DA.value fahrenheit
-                  , DL.valueOn_ DL.input setFahrenheitWithChange
+                  , DL.valueOn_ DL.input setFahrenheit'
                   , DA.klass $ mbFahrenheit <#> maybe "error" mempty
                   ]
                   []
@@ -140,7 +103,6 @@ app =
           ]
       , D.div [ DA.klass_ "debug" ]
           [ D.hr [] []
-          , D.p_ [ text_ "Last changed: ", text $ lastChanged <#> show ]
           , D.span_ [ text_ "ConvC=" ]
           , D.span [ DA.klass $ mbCelsius <#> maybe "error" show ]
               [ text $ mbCelsius <#> maybe "ERR!" show
