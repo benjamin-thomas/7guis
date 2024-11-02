@@ -18,6 +18,7 @@ module Main (main) where
 
 import Prelude
 
+import Data.Array (catMaybes)
 import Data.Foldable (for_)
 import Data.Int as Int
 import Data.Maybe (Maybe(..), maybe)
@@ -28,7 +29,7 @@ import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
-import Deku.Hooks (useState)
+import Deku.Hooks (useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import FRP.Poll (Poll)
@@ -41,18 +42,25 @@ celsiusToFahrenheit c = (c * 9 / 5) + 32
 
 inputNut
   :: { label :: String
+     , autofocus :: Boolean
      , mbVal :: Poll (Maybe Int)
      , readVal :: Poll String
      , setVal :: String → Effect Unit
      }
   → Nut
-inputNut { label, mbVal, readVal, setVal } = D.div [ DA.klass_ "form-input" ]
+inputNut { label, autofocus, mbVal, readVal, setVal } = D.div [ DA.klass_ "form-input" ]
   [ D.label [] [ text_ label ]
   , D.input
-      [ DA.value readVal
-      , DL.valueOn_ DL.input setVal
-      , DA.klass $ mbVal <#> maybe "error" mempty
-      ]
+      ( catMaybes
+          [ Just $ DA.value readVal
+          , Just $ DL.valueOn_ DL.input setVal
+          , Just $ DA.klass $ mbVal <#> maybe "error" mempty
+          , if autofocus then
+              Just $ DA.autofocus_ ""
+            else
+              Nothing
+          ]
+      )
       []
   ]
 
@@ -82,8 +90,8 @@ conversionNut { converted } = D.p [ DA.klass $ converted <#> maybe "error" show 
 app :: Nut
 app =
   Deku.do
-    setCelsius /\ celsius <- useState "0"
-    setFahrenheit /\ fahrenheit <- useState "32"
+    setCelsius /\ celsius <- useState'
+    setFahrenheit /\ fahrenheit <- useState'
 
     let
       mbCelsius :: Poll (Maybe Int)
@@ -121,12 +129,14 @@ app =
       , D.div [ DA.klass_ "form" ]
           [ inputNut
               { label: "Celsius"
+              , autofocus: false
               , mbVal: mbCelsius
               , readVal: celsius
               , setVal: setCelsius'
               }
           , inputNut
               { label: "Fahrenheit"
+              , autofocus: true
               , mbVal: mbFahrenheit
               , readVal: fahrenheit
               , setVal: setFahrenheit'
