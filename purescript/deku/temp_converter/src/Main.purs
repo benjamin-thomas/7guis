@@ -39,6 +39,46 @@ fahrenheitToCelsius f = (f - 32) * 5 / 9
 celsiusToFahrenheit :: Int → Int
 celsiusToFahrenheit c = (c * 9 / 5) + 32
 
+inputNut
+  :: { label :: String
+     , mbVal :: Poll (Maybe Int)
+     , readVal :: Poll String
+     , setVal :: String → Effect Unit
+     }
+  → Nut
+inputNut { label, mbVal, readVal, setVal } = D.div [ DA.klass_ "form-input" ]
+  [ D.label [] [ text_ label ]
+  , D.input
+      [ DA.value readVal
+      , DL.valueOn_ DL.input setVal
+      , DA.klass $ mbVal <#> maybe "error" mempty
+      ]
+      []
+  ]
+
+debugNut :: { mbCelsius :: Poll (Maybe Int), mbFahrenheit :: Poll (Maybe Int) } → Nut
+debugNut { mbCelsius, mbFahrenheit } = D.div [ DA.klass_ "debug" ]
+  [ D.hr [] []
+  , D.span_ [ text_ "ConvC=" ]
+  , D.span [ DA.klass $ mbCelsius <#> maybe "error" show ]
+      [ text $ mbCelsius <#> maybe "ERR!" show
+      ]
+  , D.br [] []
+  , D.span_ [ text_ " ConvF=" ]
+  , D.span [ DA.klass $ mbFahrenheit <#> maybe "error" show ]
+      [ text $ mbFahrenheit <#> maybe "ERR!" show
+      ]
+  , D.hr [] []
+  ]
+
+conversionNut :: { converted :: Poll (Maybe { c :: Int, f :: Int }) } → Nut
+conversionNut { converted } = D.p [ DA.klass $ converted <#> maybe "error" show ]
+  [ text $ converted <#> case _ of
+      Nothing -> "Cannot compute due to bad data!"
+      Just { c, f } ->
+        show c <> "°C = " <> show f <> "°F"
+  ]
+
 app :: Nut
 app =
   Deku.do
@@ -78,49 +118,22 @@ app =
 
     D.div []
       [ D.h1__ "Temp Converter"
-
       , D.div [ DA.klass_ "form" ]
-          [ D.div [ DA.klass_ "form-input" ]
-              [ D.label [] [ text_ "Celsius" ]
-              , D.input
-                  [ DA.value celsius
-                  , DL.valueOn_ DL.input setCelsius'
-
-                  , DA.klass $ mbCelsius <#> maybe "error" mempty
-                  ]
-                  []
-              ]
-
-          , D.div [ DA.klass_ "form-input" ]
-              [ D.label [] [ text_ "Fahrenheit" ]
-              , D.input
-                  [ DA.value fahrenheit
-                  , DL.valueOn_ DL.input setFahrenheit'
-                  , DA.klass $ mbFahrenheit <#> maybe "error" mempty
-                  ]
-                  []
-              ]
+          [ inputNut
+              { label: "Celsius"
+              , mbVal: mbCelsius
+              , readVal: celsius
+              , setVal: setCelsius'
+              }
+          , inputNut
+              { label: "Fahrenheit"
+              , mbVal: mbFahrenheit
+              , readVal: fahrenheit
+              , setVal: setFahrenheit'
+              }
           ]
-      , D.div [ DA.klass_ "debug" ]
-          [ D.hr [] []
-          , D.span_ [ text_ "ConvC=" ]
-          , D.span [ DA.klass $ mbCelsius <#> maybe "error" show ]
-              [ text $ mbCelsius <#> maybe "ERR!" show
-              ]
-          , D.br [] []
-          , D.span_ [ text_ " ConvF=" ]
-          , D.span [ DA.klass $ mbFahrenheit <#> maybe "error" show ]
-              [ text $ mbFahrenheit <#> maybe "ERR!" show
-              ]
-          , D.hr [] []
-          ]
-      , D.p [ DA.klass $ converted <#> maybe "error" show ]
-          [ text $ converted <#> case _ of
-              Nothing -> "Cannot compute due to bad data!"
-              Just { c, f } ->
-                show c <> "°C = " <> show f <> "°F"
-
-          ]
+      , debugNut { mbCelsius, mbFahrenheit }
+      , conversionNut { converted }
 
       ]
 
