@@ -8,20 +8,20 @@ Terminal 1:
 Terminal 2:
   vite dev
 
-
----
-
-TODO: Use floats, but I don't use Number.fromString since it delegates to crappy JS parseFloat. Rather, use a parser.
-
  -}
 module Main (main) where
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Data.Array (catMaybes)
+import Data.Either (Either(..))
 import Data.Foldable (for_)
-import Data.Int as Int
+import Data.Formatter.Number (formatNumber)
+import Data.Formatter.Parser.Number (parseNumber)
+import Data.Identity (Identity)
 import Data.Maybe (Maybe(..), maybe)
+import Data.String.Utils as SU
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
 import Deku.Core (Nut)
@@ -32,18 +32,21 @@ import Deku.Do as Deku
 import Deku.Hooks (useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Console (log)
 import FRP.Poll (Poll)
+import Parsing (ParserT, runParser)
+import Parsing.String (char, eof)
 
-fahrenheitToCelsius :: Int → Int
-fahrenheitToCelsius f = (f - 32) * 5 / 9
+fahrenheitToCelsius :: Number → Number
+fahrenheitToCelsius f = (f - 32.0) * 5.0 / 9.0
 
-celsiusToFahrenheit :: Int → Int
-celsiusToFahrenheit c = (c * 9 / 5) + 32
+celsiusToFahrenheit :: Number → Number
+celsiusToFahrenheit c = (c * 9.0 / 5.0) + 32.0
 
 inputNut
   :: { label :: String
      , autofocus :: Boolean
-     , mbVal :: Poll (Maybe Int)
+     , mbVal :: Poll (Maybe Number)
      , readVal :: Poll String
      , setVal :: String → Effect Unit
      }
@@ -52,7 +55,7 @@ inputNut { label, autofocus, mbVal, readVal, setVal } = D.div [ DA.klass_ "form-
   [ D.label [] [ text_ label ]
   , D.input
       ( catMaybes
-          [ Just $ DA.value readVal
+          [ Just $ DA.value (readVal <#> (\(s :: String) -> s))
           , Just $ DL.valueOn_ DL.input setVal
           , Just $ DA.klass $ mbVal <#> maybe "error" mempty
           , if autofocus then
@@ -64,7 +67,7 @@ inputNut { label, autofocus, mbVal, readVal, setVal } = D.div [ DA.klass_ "form-
       []
   ]
 
-debugNut :: { mbCelsius :: Poll (Maybe Int), mbFahrenheit :: Poll (Maybe Int) } → Nut
+debugNut :: { mbCelsius :: Poll (Maybe Number), mbFahrenheit :: Poll (Maybe Number) } → Nut
 debugNut { mbCelsius, mbFahrenheit } = D.div [ DA.klass_ "debug" ]
   [ D.hr [] []
   , D.span_ [ text_ "ConvC=" ]
@@ -79,13 +82,36 @@ debugNut { mbCelsius, mbFahrenheit } = D.div [ DA.klass_ "debug" ]
   , D.hr [] []
   ]
 
-conversionNut :: { converted :: Poll (Maybe { c :: Int, f :: Int }) } → Nut
+conversionNut :: { converted :: Poll (Maybe { c :: Number, f :: Number }) } → Nut
 conversionNut { converted } = D.p [ DA.klass $ converted <#> maybe "error" show ]
   [ text $ converted <#> case _ of
       Nothing -> "Cannot compute due to bad data!"
       Just { c, f } ->
         show c <> "°C = " <> show f <> "°F"
   ]
+
+fmtNumber :: Number -> String
+fmtNumber n =
+  case formatNumber "0.000" n of
+    Left _ -> "ERR!!" -- should never happen since the format is hardcoded
+    Right str -> str
+
+numberFromString ∷ String → Maybe Number
+numberFromString str =
+  -- Weird, the parser fails on leading minus sign so I must handle the negation manually
+  let
+    parseNegNumber :: ParserT String Identity Number
+    parseNegNumber = (char '-' *> parseNumber) <#> negate
+
+    parseVal :: ParserT String Identity Number
+    parseVal =
+      parseNegNumber <|> parseNumber
+  in
+    case runParser sanitized (parseVal <* eof) of
+      Left _ -> Nothing
+      Right n -> Just n
+  where
+  sanitized = if SU.endsWith "." str then str <> "0" else str
 
 app :: Nut
 app =
@@ -94,27 +120,27 @@ app =
     setFahrenheit /\ fahrenheit <- useState'
 
     let
-      mbCelsius :: Poll (Maybe Int)
-      mbCelsius = Int.fromString <$> celsius
+      mbCelsius :: Poll (Maybe Number)
+      mbCelsius = numberFromString <$> celsius
 
       setCelsius' :: String → Effect Unit
       setCelsius' str =
         setCelsius str *>
           for_
-            (Int.fromString str)
-            (\c -> setFahrenheit $ show $ celsiusToFahrenheit c)
+            (numberFromString str)
+            (\c -> setFahrenheit $ fmtNumber $ celsiusToFahrenheit c)
 
-      mbFahrenheit :: Poll (Maybe Int)
-      mbFahrenheit = fahrenheit <#> Int.fromString
+      mbFahrenheit :: Poll (Maybe Number)
+      mbFahrenheit = fahrenheit <#> numberFromString
 
       setFahrenheit' :: String → Effect Unit
       setFahrenheit' str =
         setFahrenheit str *>
           for_
-            (Int.fromString str)
-            (\f -> setCelsius $ show $ fahrenheitToCelsius f)
+            (numberFromString str)
+            (\f -> setCelsius $ fmtNumber $ fahrenheitToCelsius f)
 
-      converted :: Poll (Maybe { c :: Int, f :: Int })
+      converted :: Poll (Maybe { c :: Number, f :: Number })
       converted =
         make
           <$> mbCelsius
@@ -144,10 +170,11 @@ app =
           ]
       , debugNut { mbCelsius, mbFahrenheit }
       , conversionNut { converted }
-
       ]
 
 main :: Effect Unit
 main = do
+  log "Booting up..."
+  -- log $ "Parsing test" <> show (numberFromString "-01.234")
   void $ runInBody app
 

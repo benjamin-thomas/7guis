@@ -17,6 +17,7 @@
             "deku-dom",
             "fetch",
             "filterable",
+            "formatters",
             "free",
             "profunctor-lenses",
             "qualified-do",
@@ -24,6 +25,7 @@
             "routing",
             "routing-duplex",
             "string-parsers",
+            "strings",
             "stringutils",
             "tidy-codegen",
             "uint",
@@ -65,11 +67,13 @@
             "exists",
             "fetch",
             "filterable",
+            "fixed-points",
             "float32",
             "foldable-traversable",
             "foreign",
             "foreign-object",
             "form-urlencoded",
+            "formatters",
             "free",
             "functions",
             "functors",
@@ -110,6 +114,7 @@
             "ordered-collections",
             "orders",
             "parallel",
+            "parsing",
             "partial",
             "posix-types",
             "prelude",
@@ -1263,6 +1268,17 @@
         "ordered-collections"
       ]
     },
+    "fixed-points": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-hTl5fzeG4mzAOFzEzAeNH7kJvJgYCH7x3v2NdX9pOE4=",
+      "dependencies": [
+        "exists",
+        "newtype",
+        "prelude",
+        "transformers"
+      ]
+    },
     "float32": {
       "type": "registry",
       "version": "2.0.0",
@@ -1338,6 +1354,20 @@
         "prelude",
         "strings",
         "tuples"
+      ]
+    },
+    "formatters": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-5JaC9d2p0xoqJWjWxlHH19R4iJwFTBr4j7SlYcLgicE=",
+      "dependencies": [
+        "datetime",
+        "fixed-points",
+        "lists",
+        "numbers",
+        "parsing",
+        "prelude",
+        "transformers"
       ]
     },
     "free": {
@@ -1900,6 +1930,38 @@
         "profunctor",
         "refs",
         "transformers"
+      ]
+    },
+    "parsing": {
+      "type": "registry",
+      "version": "10.2.0",
+      "integrity": "sha256-ZDIdMFAKkst57x6BVa1aUWJnS8smoZnXsZ339Aq1mPA=",
+      "dependencies": [
+        "arrays",
+        "control",
+        "effect",
+        "either",
+        "enums",
+        "foldable-traversable",
+        "functions",
+        "identity",
+        "integers",
+        "lazy",
+        "lists",
+        "maybe",
+        "newtype",
+        "nullable",
+        "numbers",
+        "partial",
+        "prelude",
+        "st",
+        "strings",
+        "tailrec",
+        "transformers",
+        "tuples",
+        "unfoldable",
+        "unicode",
+        "unsafe-coerce"
       ]
     },
     "partial": {

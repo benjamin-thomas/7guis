@@ -16,6 +16,7 @@ package:
     - deku-dom
     - fetch
     - filterable
+    - formatters
     - free
     - profunctor-lenses
     - qualified-do
@@ -23,6 +24,7 @@ package:
     - routing
     - routing-duplex
     - string-parsers
+    - strings
     - stringutils
     - tidy-codegen
     - uint
