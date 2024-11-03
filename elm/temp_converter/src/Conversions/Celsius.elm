@@ -1,19 +1,14 @@
-module Conversions.Celsius exposing (fromString, toFahrenheit, toString)
+module Conversions.Celsius exposing (toFahrenheit, toString)
 
 import Conversions.Units exposing (Celsius(..), Fahrenheit(..))
 import Round
 
 
 toFahrenheit : Celsius -> Fahrenheit
-toFahrenheit (Celsius c) =
-    Fahrenheit (c * 9 / 5 + 32)
-
-
-fromString : String -> Maybe Celsius
-fromString s =
-    s |> String.toFloat |> Maybe.map Celsius
+toFahrenheit (MkCelsius c) =
+    MkFahrenheit (c * 9 / 5 + 32)
 
 
 toString : Celsius -> String
-toString (Celsius val) =
+toString (MkCelsius val) =
     Round.round 2 val

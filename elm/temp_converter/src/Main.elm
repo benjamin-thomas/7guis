@@ -3,8 +3,8 @@ module Main exposing (main)
 import Browser
 import Conversions.Celsius as Celsius
 import Conversions.Fahrenheit as Fahrenheit
-import Conversions.Units exposing (Celsius, Fahrenheit)
-import Html exposing (Html, div, h1, input, label, pre, text)
+import Conversions.Units exposing (Celsius(..), Fahrenheit(..))
+import Html exposing (Html, div, h1, hr, input, label, pre, text)
 import Html.Attributes exposing (style, value)
 import Html.Events exposing (onInput)
 
@@ -13,16 +13,35 @@ import Html.Events exposing (onInput)
 -- MODEL
 
 
+type Validation a
+    = Valid a
+    | Invalid a
+
+
+type alias Unvalidate a =
+    { klass : String, value : a }
+
+
+unValidate : Validation a -> Unvalidate a
+unValidate validation =
+    case validation of
+        Valid v ->
+            { klass = "", value = v }
+
+        Invalid v ->
+            { klass = "error", value = v }
+
+
 type alias Model =
-    { celsius : { input : Maybe String, conv : Maybe Celsius }
-    , fahrenheit : { input : Maybe String, conv : Maybe Fahrenheit }
+    { celsius : Validation String
+    , fahrenheit : Validation String
     }
 
 
 init : Model
 init =
-    { celsius = { input = Nothing, conv = Nothing }
-    , fahrenheit = { input = Nothing, conv = Nothing }
+    { celsius = Valid "0"
+    , fahrenheit = Valid "32"
     }
 
 
@@ -35,114 +54,83 @@ type Msg
     | FahrenheitChanged String
 
 
-nonEmpty : String -> Maybe String
-nonEmpty s =
-    case s of
-        "" ->
-            Nothing
-
-        x ->
-            Just x
-
-
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        CelsiusChanged str ->
-            let
-                celsiusInp =
-                    nonEmpty str
+        CelsiusChanged cStr ->
+            case String.toFloat cStr of
+                Nothing ->
+                    { celsius = Invalid cStr
+                    , fahrenheit = model.fahrenheit
+                    }
 
-                celsiusConv =
-                    celsiusInp |> Maybe.andThen Celsius.fromString
+                Just vc ->
+                    { celsius = Valid cStr
+                    , fahrenheit = Valid <| Fahrenheit.toString <| Celsius.toFahrenheit (MkCelsius vc)
+                    }
 
-                fahrenheitConv =
-                    celsiusConv |> Maybe.map Celsius.toFahrenheit
+        FahrenheitChanged fStr ->
+            case String.toFloat fStr of
+                Nothing ->
+                    { celsius = model.celsius
+                    , fahrenheit = Invalid fStr
+                    }
 
-                fahrenheitInp =
-                    fahrenheitConv |> Maybe.map Fahrenheit.toString
-            in
-            { model
-                | celsius = { input = celsiusInp, conv = celsiusConv }
-                , fahrenheit = { input = fahrenheitInp, conv = fahrenheitConv }
-            }
-
-        FahrenheitChanged str ->
-            let
-                fahrenheitInp =
-                    nonEmpty str
-
-                fahrenheitConv =
-                    fahrenheitInp |> Maybe.andThen Fahrenheit.fromString
-
-                celsiusConv =
-                    fahrenheitConv |> Maybe.map Fahrenheit.toCelsius
-
-                celsiusInp =
-                    celsiusConv |> Maybe.map Celsius.toString
-            in
-            { model
-                | celsius = { input = celsiusInp, conv = celsiusConv }
-                , fahrenheit = { input = fahrenheitInp, conv = fahrenheitConv }
-            }
+                Just vf ->
+                    { celsius = Valid <| Celsius.toString <| Fahrenheit.toCelsius (MkFahrenheit vf)
+                    , fahrenheit = Valid fStr
+                    }
 
 
 
 -- VIEW
 
 
-isInvalid : { input : Maybe input, conv : Maybe converted } -> Bool
-isInvalid { input, conv } =
-    input /= Nothing && conv == Nothing
-
-
-background : { input : Maybe input, conv : Maybe converted } -> Html.Attribute msg
-background result =
-    if isInvalid result then
+background : String -> Html.Attribute msg
+background klass =
+    if klass == "error" then
         style "background-color" "red"
 
     else
         style "" ""
 
 
-showInvalid : String -> { input : Maybe input, conv : Maybe converted } -> Html msg
-showInvalid errMsg result =
-    if isInvalid result then
-        div [] [ text errMsg ]
-
-    else
-        text ""
+temperatureInput : String -> (String -> msg) -> Unvalidate String -> Html msg
+temperatureInput txt msg unvalid =
+    div []
+        [ label [ style "margin-right" "10px" ] [ text txt ]
+        , input
+            [ value unvalid.value
+            , background unvalid.klass
+            , onInput msg
+            ]
+            []
+        ]
 
 
 view : Model -> Html Msg
 view model =
-    div [ style "margin-left" "20px" ]
+    let
+        unvalidCelsius =
+            unValidate model.celsius
+
+        unvalidFahrenheit =
+            unValidate model.fahrenheit
+    in
+    div [ style "margin-left" "20px", style "zoom" "1.3" ]
         [ pre [] [ text <| Debug.toString model ]
         , h1 [] [ text "Temp converter (Elm)" ]
-        , div [ style "display" "flex" ]
-            [ div []
-                [ input
-                    [ value (model.celsius.input |> Maybe.withDefault "")
-                    , background model.celsius
-                    , onInput CelsiusChanged
-                    ]
-                    []
-                , label [] [ text "Celsius" ]
-                , showInvalid "Bad celsius" model.celsius
-                ]
-            , div []
-                [ input
-                    [ value (model.fahrenheit.input |> Maybe.withDefault "")
-                    , background model.fahrenheit
-                    , onInput FahrenheitChanged
-                    ]
-                    []
-                , label [] [ text "Fahrenheit" ]
-                , showInvalid "Bad fahrenheit" model.fahrenheit
-                ]
-            , div []
-                []
+        , div [ style "display" "flex", style "gap" "30px" ]
+            [ temperatureInput "Celsius" CelsiusChanged unvalidCelsius
+            , temperatureInput "Fahrenheit" FahrenheitChanged unvalidFahrenheit
             ]
+        , hr [ style "margin" "30px 0" ] []
+        , case ( model.celsius, model.fahrenheit ) of
+            ( Valid cStr, Valid fStr ) ->
+                div [] [ text <| cStr ++ "C° = " ++ fStr ++ "F°" ]
+
+            _ ->
+                div [ style "color" "red" ] [ text "Cannot compute due to bad data!" ]
         ]
 
 

@@ -2,8 +2,8 @@ module Conversions.Units exposing (Celsius(..), Fahrenheit(..))
 
 
 type Fahrenheit
-    = Fahrenheit Float
+    = MkFahrenheit Float
 
 
 type Celsius
-    = Celsius Float
+    = MkCelsius Float
