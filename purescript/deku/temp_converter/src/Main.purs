@@ -55,7 +55,7 @@ inputNut { label, autofocus, mbVal, readVal, setVal } = D.div [ DA.klass_ "form-
   [ D.label [] [ text_ label ]
   , D.input
       ( catMaybes
-          [ Just $ DA.value (readVal <#> (\(s :: String) -> s))
+          [ Just $ DA.value readVal
           , Just $ DL.valueOn_ DL.input setVal
           , Just $ DA.klass $ mbVal <#> maybe "error" mempty
           , if autofocus then
@@ -128,7 +128,7 @@ app =
         setCelsius str *>
           for_
             (numberFromString str)
-            (\c -> setFahrenheit $ fmtNumber $ celsiusToFahrenheit c)
+            (setFahrenheit <<< fmtNumber <<< celsiusToFahrenheit)
 
       mbFahrenheit :: Poll (Maybe Number)
       mbFahrenheit = fahrenheit <#> numberFromString
@@ -138,7 +138,7 @@ app =
         setFahrenheit str *>
           for_
             (numberFromString str)
-            (\f -> setCelsius $ fmtNumber $ fahrenheitToCelsius f)
+            (setCelsius <<< fmtNumber <<< fahrenheitToCelsius)
 
       converted :: Poll (Maybe { c :: Number, f :: Number })
       converted =
