@@ -1,0 +1,16 @@
+package:
+  name: counter
+  dependencies:
+    - concur-react
+    - console
+    - effect
+    - formatters
+    - prelude
+    - stringutils
+  test:
+    main: Test.Main
+    dependencies: []
+workspace:
+  packageSet:
+    registry: 60.7.0
+  extraPackages: {}
