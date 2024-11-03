@@ -1,0 +1,17 @@
+body {
+    background-color: #0F172A;
+    color: rgb(227, 227, 227);
+    zoom: 1.3;
+}
+
+#counter input {
+    max-width: 150px;
+}
+
+#counter h1 {
+    margin-bottom: 0;
+}
+
+#counter input {
+    margin-top: 25px;
+}
