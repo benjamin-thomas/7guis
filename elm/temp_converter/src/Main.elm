@@ -22,8 +22,8 @@ type alias Unvalidate a =
     { klass : String, value : a }
 
 
-unValidate : Validation a -> Unvalidate a
-unValidate validation =
+unvalidate : Validation a -> Unvalidate a
+unvalidate validation =
     case validation of
         Valid v ->
             { klass = "", value = v }
@@ -40,9 +40,10 @@ type alias Model =
 
 init : Model
 init =
-    { celsius = Valid "0"
-    , fahrenheit = Valid "32"
-    }
+    update (FahrenheitChanged "100")
+        { celsius = Invalid ""
+        , fahrenheit = Invalid ""
+        }
 
 
 
@@ -60,9 +61,7 @@ update msg model =
         CelsiusChanged cStr ->
             case String.toFloat cStr of
                 Nothing ->
-                    { celsius = Invalid cStr
-                    , fahrenheit = model.fahrenheit
-                    }
+                    { model | celsius = Invalid cStr }
 
                 Just vc ->
                     { celsius = Valid cStr
@@ -72,13 +71,13 @@ update msg model =
         FahrenheitChanged fStr ->
             case String.toFloat fStr of
                 Nothing ->
-                    { celsius = model.celsius
-                    , fahrenheit = Invalid fStr
+                    { model
+                        | fahrenheit = Invalid fStr
                     }
 
                 Just vf ->
-                    { celsius = Valid <| Celsius.toString <| Fahrenheit.toCelsius (MkFahrenheit vf)
-                    , fahrenheit = Valid fStr
+                    { fahrenheit = Valid fStr
+                    , celsius = Valid <| Celsius.toString <| Fahrenheit.toCelsius (MkFahrenheit vf)
                     }
 
 
@@ -88,6 +87,7 @@ update msg model =
 
 background : String -> Html.Attribute msg
 background klass =
+    -- I would normally just insert class name
     if klass == "error" then
         style "background-color" "red"
 
@@ -95,8 +95,8 @@ background klass =
         style "" ""
 
 
-temperatureInput : String -> (String -> msg) -> Unvalidate String -> Html msg
-temperatureInput txt msg unvalid =
+temperature : String -> (String -> msg) -> Unvalidate String -> Html msg
+temperature txt msg unvalid =
     div []
         [ label [ style "margin-right" "10px" ] [ text txt ]
         , input
@@ -112,17 +112,17 @@ view : Model -> Html Msg
 view model =
     let
         unvalidCelsius =
-            unValidate model.celsius
+            unvalidate model.celsius
 
         unvalidFahrenheit =
-            unValidate model.fahrenheit
+            unvalidate model.fahrenheit
     in
     div [ style "margin-left" "20px", style "zoom" "1.3" ]
         [ pre [] [ text <| Debug.toString model ]
         , h1 [] [ text "Temp converter (Elm)" ]
         , div [ style "display" "flex", style "gap" "30px" ]
-            [ temperatureInput "Celsius" CelsiusChanged unvalidCelsius
-            , temperatureInput "Fahrenheit" FahrenheitChanged unvalidFahrenheit
+            [ temperature "Celsius" CelsiusChanged unvalidCelsius
+            , temperature "Fahrenheit" FahrenheitChanged unvalidFahrenheit
             ]
         , hr [ style "margin" "30px 0" ] []
         , case ( model.celsius, model.fahrenheit ) of
