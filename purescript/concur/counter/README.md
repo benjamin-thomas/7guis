@@ -3,7 +3,7 @@ Initialize projects with:
 ```
 mkdir project_name
 rsync -av --exclude-from=../counter/.gitignore  ../counter/ .
-npm i
+pnpm i
 spago build
 ```
 
@@ -14,5 +14,5 @@ Then run with:
 pscid --censor-codes UnusedName,ShadowedName,UnusedImport,UnusedExplicitImport,UnusedDeclaration
 
 # terminal 2
-vite dev
+vite dev # globally installed
 ```

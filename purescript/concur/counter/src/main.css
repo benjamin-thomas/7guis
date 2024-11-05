@@ -15,3 +15,7 @@ body {
 #counter input {
     margin-top: 25px;
 }
+
+#counter button {
+    cursor: pointer;
+}
