@@ -5,7 +5,7 @@ import Prelude
 import Concur.Core (Widget)
 import Concur.React (HTML)
 import Concur.React.DOM as D
-import Concur.React.Props (className, onChange, value) as P
+import Concur.React.Props (className, onChange, style, value) as P
 import Concur.React.Props (unsafeTargetValue)
 import Concur.React.Run (runWidgetInDom)
 import Control.Alt ((<|>))
@@ -16,9 +16,8 @@ import Data.Identity (Identity)
 import Data.Maybe (Maybe(..))
 import Data.String.Utils as SU
 import Data.Tuple.Nested ((/\))
+import Debug as Debug
 import Effect (Effect)
-import Effect.Class (liftEffect)
-import Effect.Console (log)
 import Parsing (ParserT, runParser)
 import Parsing.String (char, eof)
 
@@ -50,16 +49,17 @@ numberFromString str =
   where
   sanitized = if SU.endsWith "." str then str <> "0" else str
 
-data Changed
-  = Celsius String
-  | Fahrenheit String
+data Msg
+  = CelsiusChanged String
+  | FahrenheitChanged String
 
-instance Show Changed where
-  show = case _ of
-    Celsius str -> "Celsius: " <> str
-    Fahrenheit str -> "Fahrenheit: " <> str
+-- Using `Debug.spy` frees us from having to define a `Show` instance (at least for simple types)
+-- instance Show Msg where
+--   show = case _ of
+--     CelsiusChanged str -> "CelsiusChanged: " <> str
+--     FahrenheitChanged str -> "FahrenheitChanged: " <> str
 
-input :: String -> (String -> Changed) -> Unvalidate String -> Widget HTML Changed
+input :: String -> (String -> Msg) -> Unvalidate String -> Widget HTML Msg
 input label tag { value, klass } =
   D.div [ P.className "form-input" ]
     [ D.label' [ D.text $ label <> ":" ]
@@ -79,7 +79,7 @@ instance Show a => Show (Validation a) where
     Valid x -> "Valid: " <> show x
     Invalid x -> "Invalid: " <> show x
 
-type TempConverterInput =
+type Model =
   { celsius :: Validation String
   , fahrenheit :: Validation String
   }
@@ -90,34 +90,11 @@ unValidate validation =
     Valid str -> { klass: "", value: str }
     Invalid str -> { klass: "error", value: str }
 
-tempConverter :: forall a. TempConverterInput -> Widget HTML a
-tempConverter { celsius, fahrenheit } = do
-  liftEffect $ log $ "Rendering: " <> show { celsius, fahrenheit }
-  let uc = unValidate celsius
-  let uf = unValidate fahrenheit
-  let
-    recap :: forall b. Widget HTML b
-    recap = case (celsius /\ fahrenheit) of
-      Valid c /\ Valid f ->
-        D.p' [ D.text $ c <> " C° = " <> f <> " F°" ]
-      _ -> D.p [ P.className "error" ] [ D.text "Cannot compute due to bad data!" ]
-
-  changed <- D.div'
-    [ D.h1' [ D.text "Temp Converter" ]
-    , D.div'
-        [ D.div [ P.className "form" ]
-            [ input "Celsius" Celsius uc
-            , input "Farhenheit" Fahrenheit uf
-            ]
-        , D.hr'
-        , recap
-        ]
-    ]
-  liftEffect $ log $ "Changed: " <> show changed
-
-  case changed of
-    Celsius str ->
-      tempConverter $
+update :: Model -> Msg -> Widget HTML Msg
+update { fahrenheit, celsius } msg = do
+  view $
+    case Debug.spy "update(msg)" msg of
+      CelsiusChanged str ->
         case numberFromString str of
           Nothing ->
             { celsius: Invalid str
@@ -128,8 +105,7 @@ tempConverter { celsius, fahrenheit } = do
             , fahrenheit: Valid $ fmtNumber (celsiusToFarhenheit n)
             }
 
-    Fahrenheit str ->
-      tempConverter $
+      FahrenheitChanged str ->
         case numberFromString str of
           Nothing ->
             { celsius
@@ -140,12 +116,42 @@ tempConverter { celsius, fahrenheit } = do
             , fahrenheit: Valid str
             }
 
+view :: Model -> Widget HTML Msg
+view { celsius, fahrenheit } = do
+  -- liftEffect $ log $ "Rendering: " <> show { celsius, fahrenheit }
+  let _ = Debug.spy "view(model)" { celsius, fahrenheit }
+  let uc = unValidate celsius
+  let uf = unValidate fahrenheit
+  let
+    recap :: forall b. Widget HTML b
+    recap = case (celsius /\ fahrenheit) of
+      Valid c /\ Valid f ->
+        D.p' [ D.text $ c <> " C° = " <> f <> " F°" ]
+      _ -> D.p [ P.className "error" ] [ D.text "Cannot compute due to bad data!" ]
+
+  changed <- D.div'
+    [ D.h1 [ P.style { color: "orange" } ] [ D.text "Temp Converter" ]
+    , D.div'
+        [ D.div [ P.className "form" ]
+            [ input "Celsius" CelsiusChanged uc
+            , input "Farhenheit" FahrenheitChanged uf
+            ]
+        , D.hr'
+        , recap
+        ]
+    ]
+  update { celsius, fahrenheit } changed
+
 main :: Effect Unit
 main = do
-  let initF = 100.0
-  log "Temp converter: booting up..."
-  runWidgetInDom "app" $ tempConverter
-    { celsius: Valid $ fmtNumber (farhenheitToCelsius initF)
-    , fahrenheit: Valid $ show initF
-    }
+  let
+    widget :: Widget HTML Msg
+    widget =
+      update
+        { celsius: Invalid ""
+        , fahrenheit: Invalid ""
+        }
+        (FahrenheitChanged "100")
+
+  runWidgetInDom "app" widget
 

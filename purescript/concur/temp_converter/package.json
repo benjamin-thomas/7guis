@@ -1,7 +1,17 @@
 {
+  "name": "temp_converter",
+  "packageManager": "yarn@4.5.1",
   "private": true,
+  "scripts": {
+    "dev": "parcel dev/index.html",
+    "bundle": "rm -r ./dist/ ; rm -r ./tmp/ ; spago bundle --outfile ./tmp/index.js && cp ./dev/index.html ./dev/main.css ./tmp/ && parcel build ./tmp/index.html"
+  },
   "dependencies": {
     "react": "^17",
     "react-dom": "^17"
+  },
+  "devDependencies": {
+    "parcel": "^2.12.0",
+    "process": "^0.11.10"
   }
 }
