@@ -103,13 +103,6 @@ instance HyperView MainView es where
             mainView $
                 newModel{shouldAutofocus = False}
 
-data Editing = Celsius | Fahrenheit
-    deriving
-        ( Show
-        , Read
-        , Eq
-        )
-
 data Model = MkModel
     { shouldAutofocus :: Bool
     , celsius :: Text
