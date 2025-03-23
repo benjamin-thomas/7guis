@@ -1,0 +1,45 @@
+cabal-version:      3.0
+name:               hyper7gui
+version:            0.1.0.0
+license:            NONE
+build-type:         Simple
+
+common shared
+    ghc-options: -Wall
+    default-language: GHC2021
+
+    build-depends: base
+                 , text
+                 , bytestring
+                 , hyperbole
+                 , web-view
+                 , wai-middleware-static
+                 , effectful
+                 , string-interpolate
+                 , string-conversions
+                 , containers
+                 , file-embed
+
+    default-extensions:
+      OverloadedStrings
+      OverloadedRecordDot
+      DuplicateRecordFields
+      DataKinds
+      DeriveAnyClass
+      TypeFamilies
+      LambdaCase
+      QuasiQuotes
+      DerivingStrategies
+      UndecidableInstances
+
+
+executable todo
+    import:           shared
+    hs-source-dirs:   app/todo
+    main-is:          Main.hs
+
+
+executable counter
+    import:           shared
+    hs-source-dirs:   app/counter
+    main-is:          Main.hs
