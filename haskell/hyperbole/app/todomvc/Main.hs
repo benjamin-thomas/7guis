@@ -19,8 +19,8 @@ import Web.View.Types (AttValue)
 import Prelude hiding (div, span)
 
 {-
-rg --files -g '!/dist*' | entr -rc cabal run todo
-ghcid -c 'cabal repl todo' -T :main --warnings
+rg --files -g '!/dist*' | entr -rc cabal run todomvc
+ghcid -c 'cabal repl todomvc' -T :main --warnings
 -}
 
 data Todo = MkTodo

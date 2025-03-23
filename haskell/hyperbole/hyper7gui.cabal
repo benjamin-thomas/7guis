@@ -33,9 +33,9 @@ common shared
       UndecidableInstances
 
 
-executable todo
+executable todomvc
     import:           shared
-    hs-source-dirs:   app/todo
+    hs-source-dirs:   app/todomvc
     main-is:          Main.hs
 
 
