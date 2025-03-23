@@ -9,6 +9,7 @@ import Data.Text.Encoding qualified as TE
 
 import Network.Wai.Middleware.Static
 
+import Control.Monad (when)
 import Data.Bool (bool)
 import Data.Text qualified as T
 import Text.Printf (printf)
@@ -65,6 +66,7 @@ page = do
                 { shouldAutofocus = True
                 , celsius = ""
                 , fahrenheit = ""
+                , err = ""
                 }
     pure $ col id $ do
         hyper MkMainView $ mainView init'
@@ -92,14 +94,27 @@ instance HyperView MainView es where
         let newModel =
                 case action of
                     CelsiusChanged old txt -> do
+                        let
+                            res = conv celsiusToFahrenheit txt
+                            (converted, err) =
+                                case res of
+                                    Nothing -> ("", "Bad Celsius")
+                                    Just v -> (v, "")
                         old
                             { celsius = T.strip txt
-                            , fahrenheit = conv celsiusToFahrenheit txt
+                            , fahrenheit = converted
+                            , err = err
                             }
                     FahrenheitChanged old txt -> do
+                        let res = conv fahrenheitToCelsius txt
+                            (converted, err) =
+                                case res of
+                                    Nothing -> ("", "Bad Fahrenheit")
+                                    Just v -> (v, "")
                         old
                             { fahrenheit = T.strip txt
-                            , celsius = conv fahrenheitToCelsius txt
+                            , celsius = converted
+                            , err = err
                             }
         pure $
             mainView $
@@ -109,17 +124,22 @@ data Model = MkModel
     { shouldAutofocus :: Bool
     , celsius :: Text
     , fahrenheit :: Text
+    , err :: Text
     }
     deriving (Show, Read)
+
+isDev :: Bool
+isDev = False
 
 mainView :: Model -> View MainView ()
 mainView model = do
     h1 id "Temp Converter"
 
-    tag "pre" id $
-        text $
-            T.pack $
-                show model
+    when isDev $
+        tag "pre" id $
+            text $
+                T.pack $
+                    show model
 
     div id $ do
         let
@@ -128,21 +148,25 @@ mainView model = do
                 let debounce = 250
                  in onInput (action model) debounce
 
+            inp :: (Model -> Text -> Action MainView) -> Text -> View MainView ()
+            inp action val =
+                input
+                    ( onChange action
+                        . value val
+                        . bool id autofocus (model.shouldAutofocus)
+                    )
+
         span id $ do
-            input
-                ( onChange CelsiusChanged
-                    . value model.celsius
-                    . bool id autofocus (model.shouldAutofocus)
-                )
+            inp CelsiusChanged model.celsius
 
             label id "Celsius"
         span id "="
         span id $ do
-            input
-                ( onChange FahrenheitChanged
-                    . value model.fahrenheit
-                )
+            inp FahrenheitChanged model.fahrenheit
             label id "Fahrenheit"
+
+    div (att "style" "margin-top: 5px") $ do
+        text model.err
 
 h1 :: Mod c -> View c () -> View c ()
 h1 = tag "h1"
@@ -170,12 +194,16 @@ fahrenheitToCelsius :: Double -> Double
 fahrenheitToCelsius f =
     (f - 32) / 1.8
 
-conv :: (Double -> Double) -> Text -> Text
+conv :: (Double -> Double) -> Text -> Maybe Text
 conv f txt =
-    if T.null (T.strip txt)
-        then ""
-        else case readMaybe $ T.unpack txt of
-            Just val ->
-                T.pack $ printf "%.2f" (f val)
-            Nothing ->
-                "ERROR"
+    let
+        toText :: Double -> Text
+        toText = T.pack . printf "%.2f"
+     in
+        if T.null (T.strip txt)
+            then
+                Just ""
+            else
+                fmap
+                    (toText . f)
+                    (readMaybe $ T.unpack txt)

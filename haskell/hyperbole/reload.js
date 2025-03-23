@@ -20,10 +20,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function waitTilReady(n) {
-        if (n > 20) {
-            showNotification("Reload manually: server failed too many times");
-            return;
-        }
         fetch('/', { method: 'HEAD' })
             .then(response => {
                 if (!response.ok)
@@ -32,9 +28,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('Server is back online, reloading page...');
                 location.reload();
             })
-            .catch((err) => {
-                console.log("Server not ready yet, will retry...");
-                setTimeout(() => waitTilReady(n + 1), 100 + (n * 100));
+            .catch((_) => {
+                console.log("Server not ready yet, will retry...", n);
+                const ms = (n < 20) ? 50 : 1000;
+                setTimeout(() => waitTilReady(n + 1), ms);
             });
     }
 
