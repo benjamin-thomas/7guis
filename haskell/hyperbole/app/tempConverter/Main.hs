@@ -11,6 +11,8 @@ import Network.Wai.Middleware.Static
 
 import Data.Bool (bool)
 import Data.Text qualified as T
+import Text.Printf (printf)
+import Text.Read (readMaybe)
 import Web.Hyperbole hiding (input, label)
 import Prelude hiding (div, span)
 
@@ -91,13 +93,13 @@ instance HyperView MainView es where
                 case action of
                     CelsiusChanged old txt -> do
                         old
-                            { celsius = txt
-                            , fahrenheit = unsafeConv celsiusToFahrenheit txt
+                            { celsius = T.strip txt
+                            , fahrenheit = conv celsiusToFahrenheit txt
                             }
                     FahrenheitChanged old txt -> do
                         old
-                            { fahrenheit = txt
-                            , celsius = unsafeConv fahrenheitToCelsius txt
+                            { fahrenheit = T.strip txt
+                            , celsius = conv fahrenheitToCelsius txt
                             }
         pure $
             mainView $
@@ -168,8 +170,12 @@ fahrenheitToCelsius :: Double -> Double
 fahrenheitToCelsius f =
     (f - 32) / 1.8
 
-unsafeConv :: (Double -> Double) -> Text -> Text
-unsafeConv f txt =
-    T.pack $
-        show $
-            f (read $ T.unpack txt)
+conv :: (Double -> Double) -> Text -> Text
+conv f txt =
+    if T.null (T.strip txt)
+        then ""
+        else case readMaybe $ T.unpack txt of
+            Just val ->
+                T.pack $ printf "%.2f" (f val)
+            Nothing ->
+                "ERROR"
