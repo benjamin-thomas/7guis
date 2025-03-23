@@ -31,6 +31,7 @@ common shared
       QuasiQuotes
       DerivingStrategies
       UndecidableInstances
+      TemplateHaskell
 
 
 executable todomvc
@@ -42,4 +43,10 @@ executable todomvc
 executable counter
     import:           shared
     hs-source-dirs:   app/counter
+    main-is:          Main.hs
+
+
+executable tempConverter
+    import:           shared
+    hs-source-dirs:   app/tempConverter
     main-is:          Main.hs
