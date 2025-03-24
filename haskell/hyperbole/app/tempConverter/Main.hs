@@ -34,8 +34,9 @@ main = do
     -- let appConfig = Dev
     let staticMiddleware = staticPolicy (addBase "assets")
     -- TODO: check Effectful.Environment
-    appConfig <- (\x -> if x == Just "dev" then Dev else Prod) <$> lookupEnv "APP_ENV"
-    putStrLn $ "App config: " <> show appConfig
+    appEnv <- (\x -> if x == Just "dev" then Dev else Prod) <$> lookupEnv "APP_ENV"
+    let appConfig = MkAppConfig{appEnv = appEnv}
+    putStrLn $ "== Booting up with: " <> show appConfig
     run port $ staticMiddleware $ app appConfig
 
 reloadJs :: Text
@@ -67,7 +68,12 @@ app appConfig = do
         (document "Temp Converter")
         (runConfig appConfig $ runPage page)
 
-data AppConfig
+data AppConfig = MkAppConfig
+    { appEnv :: AppEnv
+    }
+    deriving (Show)
+
+data AppEnv
     = Dev
     | Prod
     deriving (Show)
@@ -173,7 +179,7 @@ data Model = MkModel
     }
     deriving (Show, Read)
 
-isDev :: AppConfig -> Bool
+isDev :: AppEnv -> Bool
 isDev = \case
     Dev -> True
     Prod -> False
@@ -184,7 +190,7 @@ mainView model = do
     pure $ do
         h1 id "Temp Converter"
 
-        when (isDev cfg) $
+        when (isDev cfg.appEnv) $
             tag "pre" id $
                 text $
                     T.pack $
