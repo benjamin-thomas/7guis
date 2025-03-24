@@ -1,22 +1,18 @@
-module Main where
+module Main (main) where
 
 import Data.ByteString.Lazy qualified as BSL
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 
 import Data.FileEmbed (embedFile)
-import Data.Text.Encoding qualified as TE
 
-import Effectful
-import Effectful.Dispatch.Dynamic
+import Effectful (Dispatch (Dynamic), DispatchOf, Effect)
+import Effectful.Dispatch.Dynamic (interpret, send)
 
--- import Network.Wai (pathInfo)
--- import Network.Wai.Application.Static (staticApp)
-import Network.Wai.Middleware.Static
-
--- import WaiAppStatic.Storage.Filesystem (defaultFileServerSettings)
+import Network.Wai.Middleware.Static (addBase, staticPolicy)
 
 import Data.Text qualified as T
+import Data.Text.Encoding (decodeUtf8)
 import Web.Hyperbole hiding (input)
 import Prelude hiding (div)
 
@@ -32,7 +28,7 @@ main = do
 
 reloadJs :: Text
 reloadJs =
-    TE.decodeUtf8
+    decodeUtf8
         $(embedFile "reload.js")
 
 document :: Text -> BSL.ByteString -> BSL.ByteString

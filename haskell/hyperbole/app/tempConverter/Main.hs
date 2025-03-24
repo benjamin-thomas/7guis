@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 
 import Data.ByteString.Lazy qualified as BSL
 import Data.String.Interpolate (i)
@@ -11,21 +11,32 @@ import Network.Wai.Middleware.Static
 
 import Control.Monad (when)
 import Data.Bool (bool)
+import Data.Map (Map)
+import Data.Map qualified as M
 import Data.Text qualified as T
+import Effectful (Dispatch (Dynamic), DispatchOf, Effect)
+import Effectful.Dispatch.Dynamic
+import System.Environment (lookupEnv)
 import Text.Printf (printf)
 import Text.Read (readMaybe)
 import Web.Hyperbole hiding (input, label)
+import Web.View.Style (extClass)
 import Prelude hiding (div, span)
 
 {-
 ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./assets/css/temp-converter.css
+APP_ENV=dev ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./assets/css/temp-converter.css --reload=./reload.js
 -}
 
 main :: IO ()
 main = do
     let port = 4321 :: Int
+    -- let appConfig = Dev
     let staticMiddleware = staticPolicy (addBase "assets")
-    run port $ staticMiddleware app
+    -- TODO: check Effectful.Environment
+    appConfig <- (\x -> if x == Just "dev" then Dev else Prod) <$> lookupEnv "APP_ENV"
+    putStrLn $ "App config: " <> show appConfig
+    run port $ staticMiddleware $ app appConfig
 
 reloadJs :: Text
 reloadJs =
@@ -50,14 +61,32 @@ document title cnt =
       <body>#{cnt}</body>
   </html>|]
 
-app :: Application
-app = do
+app :: AppConfig -> Application
+app appConfig = do
     liveApp
         (document "Temp Converter")
-        (runPage page)
+        (runConfig appConfig $ runPage page)
+
+data AppConfig
+    = Dev
+    | Prod
+    deriving (Show)
+
+data Config :: Effect where
+    GetConfig :: Config m AppConfig
+
+getConfig :: (Config :> es) => Eff es AppConfig
+getConfig = send $ GetConfig
+
+type instance DispatchOf Config = 'Dynamic
+
+runConfig :: AppConfig -> Eff (Config : es) a -> Eff es a
+runConfig appConfig = interpret $ \_ -> \case
+    GetConfig -> pure appConfig
 
 page ::
     ( Hyperbole :> es
+    , Config :> es
     ) =>
     Eff es (Page '[MainView])
 page = do
@@ -66,10 +95,11 @@ page = do
                 { shouldAutofocus = True
                 , celsius = ""
                 , fahrenheit = ""
-                , err = ""
+                , errFields = mempty
                 }
+    viewed <- mainView init'
     pure $ col id $ do
-        hyper MkMainView $ mainView init'
+        hyper MkMainView viewed
 
 data MainView = MkMainView
     deriving
@@ -78,7 +108,7 @@ data MainView = MkMainView
         , ViewId
         )
 
-instance HyperView MainView es where
+instance (Config :> es) => HyperView MainView es where
     data Action MainView
         = CelsiusChanged Model Text
         | FahrenheitChanged Model Text
@@ -92,81 +122,104 @@ instance HyperView MainView es where
         -- Construct the new Model separately to prevent cursor stealing on fahrenheit change.
         -- We want to autofocus once, one initial page load.
         let newModel =
-                case action of
-                    CelsiusChanged old txt -> do
-                        let
-                            res = conv celsiusToFahrenheit txt
-                            (converted, err) =
-                                case res of
-                                    Nothing -> ("", "Bad Celsius")
-                                    Just v -> (v, "")
-                        old
-                            { celsius = T.strip txt
-                            , fahrenheit = converted
-                            , err = err
-                            }
-                    FahrenheitChanged old txt -> do
-                        let res = conv fahrenheitToCelsius txt
-                            (converted, err) =
-                                case res of
-                                    Nothing -> ("", "Bad Fahrenheit")
-                                    Just v -> (v, "")
-                        old
-                            { fahrenheit = T.strip txt
-                            , celsius = converted
-                            , err = err
-                            }
-        pure $
-            mainView $
-                newModel{shouldAutofocus = False}
+                let
+                    updateErrFields :: (Ord k) => v -> k -> Map k v -> Map k v
+                    updateErrFields v =
+                        M.alter $
+                            \_ -> Just v
+                 in
+                    case action of
+                        CelsiusChanged old txt -> do
+                            let
+                                res = conv celsiusToFahrenheit txt
+                                (converted, hasErr) =
+                                    case res of
+                                        Nothing -> ("", True)
+                                        Just v -> (v, False)
+                            old
+                                { celsius = T.strip txt
+                                , fahrenheit = converted
+                                , errFields =
+                                    updateErrFields hasErr CelsiusField
+                                        . updateErrFields False FahrenheitField
+                                        $ old.errFields
+                                }
+                        FahrenheitChanged old txt -> do
+                            let res = conv fahrenheitToCelsius txt
+                                (converted, hasErr) =
+                                    case res of
+                                        Nothing -> ("", True)
+                                        Just v -> (v, False)
+                            old
+                                { fahrenheit = T.strip txt
+                                , celsius = converted
+                                , errFields =
+                                    updateErrFields hasErr FahrenheitField
+                                        . updateErrFields False CelsiusField
+                                        $ old.errFields
+                                }
+
+        mainView $
+            newModel{shouldAutofocus = False}
+
+data FormField = CelsiusField | FahrenheitField
+    deriving (Show, Read, Eq, Ord)
 
 data Model = MkModel
     { shouldAutofocus :: Bool
     , celsius :: Text
     , fahrenheit :: Text
-    , err :: Text
+    , errFields :: Map FormField Bool
     }
     deriving (Show, Read)
 
-isDev :: Bool
-isDev = False
+isDev :: AppConfig -> Bool
+isDev = \case
+    Dev -> True
+    Prod -> False
 
-mainView :: Model -> View MainView ()
+mainView :: (Config :> es) => Model -> Eff es (View MainView ())
 mainView model = do
-    h1 id "Temp Converter"
+    cfg <- getConfig
+    pure $ do
+        h1 id "Temp Converter"
 
-    when isDev $
-        tag "pre" id $
-            text $
-                T.pack $
-                    show model
+        when (isDev cfg) $
+            tag "pre" id $
+                text $
+                    T.pack $
+                        show model
 
-    div id $ do
-        let
-            onChange :: (Model -> Text -> Action MainView) -> Mod MainView
-            onChange action =
-                let debounce = 250
-                 in onInput (action model) debounce
+        div id $ do
+            let
+                onChange :: (Model -> Text -> Action MainView) -> Mod MainView
+                onChange action =
+                    let debounce = 250
+                     in onInput (action model) debounce
 
-            inp :: (Model -> Text -> Action MainView) -> Text -> View MainView ()
-            inp action val =
-                input
-                    ( onChange action
-                        . value val
-                        . bool id autofocus (model.shouldAutofocus)
-                    )
+                inp :: (Model -> Text -> Action MainView) -> Text -> Bool -> View MainView ()
+                inp action val hasError' =
+                    input
+                        ( onChange action
+                            . value val
+                            . bool id autofocus (model.shouldAutofocus)
+                            . bool id (extClass "error") hasError'
+                        )
 
-        span id $ do
-            inp CelsiusChanged model.celsius
+                hasError key =
+                    case M.lookup key model.errFields of
+                        Just True -> True
+                        _ -> False
 
-            label id "Celsius"
-        span id "="
-        span id $ do
-            inp FahrenheitChanged model.fahrenheit
-            label id "Fahrenheit"
+            span id $ do
+                inp CelsiusChanged model.celsius (hasError CelsiusField)
+                label id "Celsius"
 
-    div (att "style" "margin-top: 5px") $ do
-        text model.err
+            span id "="
+
+            span id $ do
+                inp FahrenheitChanged model.fahrenheit (hasError FahrenheitField)
+                label id "Fahrenheit"
 
 h1 :: Mod c -> View c () -> View c ()
 h1 = tag "h1"
@@ -182,9 +235,6 @@ input m = tag "input" m ""
 
 label :: Mod c -> View c () -> View c ()
 label = tag "label"
-
-disabled :: Mod c
-disabled = att "disabled" ""
 
 celsiusToFahrenheit :: Double -> Double
 celsiusToFahrenheit c =
