@@ -12,7 +12,7 @@ import Effectful
 import Effectful.Concurrent.STM
 import Effectful.Dispatch.Dynamic
 import Web.Hyperbole hiding (basicDocument)
-import Web.Hyperbole.Data.QueryData qualified as QD
+import Web.Hyperbole.Data.Param qualified as HD
 import Web.Hyperbole.View.Forms (Input (Input))
 import Web.View.Style (addClass, cls, extClass, prop)
 import Web.View.Types (AttValue)
@@ -28,7 +28,15 @@ data Todo = MkTodo
     , descr :: Text
     , done :: Bool
     }
-    deriving (Show, Read, Eq)
+    deriving
+        ( Show
+        , Read
+        , Eq
+        , Ord
+        , Generic
+        , ToJSON
+        , FromJSON
+        )
 
 main :: IO ()
 main = do
@@ -58,14 +66,21 @@ basicDocument title cnt =
       <body>#{cnt}</body>
   </html>|]
 
-filterParam :: QD.Param
+filterParam :: HD.Param
 filterParam = "filter"
 
 data Filter
     = FilterAll
     | FilterActive
     | FilterCompleted
-    deriving (Show, Read, Eq)
+    deriving
+        ( Show
+        , Read
+        , Eq
+        , Generic
+        , FromJSON
+        , ToJSON
+        )
 
 toFilter :: Maybe Text -> Filter
 toFilter = \case
@@ -90,7 +105,17 @@ instance Route AppRoute where
     baseRoute = Just Main
 
 newtype TodoStore = MkTodoStore (Map Int Todo)
-    deriving newtype (Show, Read, ToParam, FromParam)
+    -- deriving
+    --     ( Show
+    --     , Read
+    --     , Generic
+    --     )
+    deriving newtype
+        ( Ord
+        , Eq
+        , FromJSON
+        , ToJSON
+        )
 
 instance Session TodoStore where
     sessionKey = "todo-store"
@@ -104,8 +129,8 @@ initStore =
         , (4, MkTodo 4 "Do the dishes" False)
         ]
 
-instance DefaultParam TodoStore where
-    defaultParam =
+instance Default TodoStore where
+    def =
         MkTodoStore initStore
 
 data TodosEff :: Effect where
@@ -186,7 +211,12 @@ consoleLog :: (Logging :> es, Show a) => String -> a -> Eff es ()
 consoleLog str = send . ConsoleLog str
 
 data TodosView = MkTodosView
-    deriving (Show, Read, ViewId)
+    deriving
+        ( Show
+        , Read
+        , Generic
+        , ViewId
+        )
 
 pluralize :: Int -> Text -> Text -> Text
 pluralize n singular plural =
@@ -221,7 +251,12 @@ instance
         | SubmitTodo
         | Toggle Todo
         | ToggleAll
-        deriving (Show, Read, ViewAction)
+        deriving
+            ( Show
+            , Read
+            , Generic
+            , ViewAction
+            )
 
     update = \case
         ClearCompleted -> do
@@ -245,6 +280,7 @@ instance
         SubmitTodo -> do
             consoleLog "SubmitTodo" ("ENTER" :: Text)
             fd <- formData @(TodoForm Identity)
+            consoleLog "FormData" (fd.descr')
             todos <- loadAll
             let furthest =
                     let ids = fmap (.id_) todos
@@ -403,7 +439,12 @@ todosView shouldFocus filter' todos = do
         )
 
 data TodoView = MkTodoView Int
-    deriving (Show, Read, ViewId)
+    deriving
+        ( Show
+        , Read
+        , Generic
+        , ViewId
+        )
 
 instance
     ( TodosEff :> es
@@ -416,7 +457,12 @@ instance
     data Action TodoView
         = EnterEdit Todo
         | SubmitEdit Todo
-        deriving (Show, Read, ViewAction)
+        deriving
+            ( Show
+            , Read
+            , Generic
+            , ViewAction
+            )
 
     update = \case
         EnterEdit todo -> do

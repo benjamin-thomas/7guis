@@ -10,6 +10,10 @@ import Data.Text.Encoding qualified as TE
 import Network.Wai.Middleware.Static
 
 import Control.Monad (when)
+
+-- import Data.Aeson
+
+import Data.Aeson (FromJSONKey, ToJSONKey)
 import Data.Bool (bool)
 import Data.Map (Map)
 import Data.Map qualified as M
@@ -31,10 +35,11 @@ APP_ENV=dev ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./a
 main :: IO ()
 main = do
     let port = 4321 :: Int
-    -- let appConfig = Dev
     let staticMiddleware = staticPolicy (addBase "assets")
-    -- TODO: check Effectful.Environment
-    appEnv <- (\x -> if x == Just "dev" then Dev else Prod) <$> lookupEnv "APP_ENV"
+    appEnv <-
+        fmap
+            (bool Prod Dev . (Just "dev" ==))
+            (lookupEnv "APP_ENV")
     let appConfig = MkAppConfig{appEnv = appEnv}
     putStrLn $ "== Booting up with: " <> show appConfig
     run port $ staticMiddleware $ app appConfig
@@ -111,6 +116,7 @@ data MainView = MkMainView
     deriving
         ( Show
         , Read
+        , Generic
         , ViewId
         )
 
@@ -121,6 +127,7 @@ instance (Config :> es) => HyperView MainView es where
         deriving
             ( Show
             , Read
+            , Generic
             , ViewAction
             )
 
@@ -169,7 +176,17 @@ instance (Config :> es) => HyperView MainView es where
             newModel{shouldAutofocus = False}
 
 data FormField = CelsiusField | FahrenheitField
-    deriving (Show, Read, Eq, Ord)
+    deriving
+        ( Show
+        , Read
+        , Eq
+        , Ord
+        , Generic
+        , ToJSON
+        , FromJSON
+        , ToJSONKey
+        , FromJSONKey
+        )
 
 data Model = MkModel
     { shouldAutofocus :: Bool
@@ -177,7 +194,13 @@ data Model = MkModel
     , fahrenheit :: Text
     , errFields :: Map FormField Bool
     }
-    deriving (Show, Read)
+    deriving
+        ( Show
+        , Read
+        , Generic
+        , ToJSON
+        , FromJSON
+        )
 
 isDev :: AppEnv -> Bool
 isDev = \case

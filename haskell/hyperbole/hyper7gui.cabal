@@ -12,6 +12,7 @@ common shared
                  , text
                  , bytestring
                  , hyperbole
+                 , aeson
                  , web-view
                  , wai-middleware-static
                  , effectful

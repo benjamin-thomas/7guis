@@ -71,13 +71,15 @@ newtype Counter = MkCounter Int
         , Read
         , ToParam
         , FromParam
+        , ToJSON
+        , FromJSON
         )
 
 instance Session Counter where
     sessionKey = "counter"
 
-instance DefaultParam Counter where
-    defaultParam = MkCounter 0
+instance Default Counter where
+    def = MkCounter 0
 
 data CounterEff :: Effect where
     Load :: CounterEff m Int
@@ -108,6 +110,7 @@ data CounterView = MkCounterView
     deriving
         ( Show
         , Read
+        , Generic
         , ViewId
         )
 
@@ -117,6 +120,7 @@ instance (CounterEff :> es) => HyperView CounterView es where
         deriving
             ( Show
             , Read
+            , Generic
             , ViewAction
             )
 
