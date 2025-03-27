@@ -9,6 +9,7 @@ common shared
     default-language: GHC2021
 
     build-depends: base
+                 , dev-reload
                  , text
                  , bytestring
                  , hyperbole
@@ -19,7 +20,6 @@ common shared
                  , string-interpolate
                  , string-conversions
                  , containers
-                 , file-embed
 
     default-extensions:
       OverloadedStrings
@@ -34,6 +34,14 @@ common shared
       UndecidableInstances
       TemplateHaskell
 
+
+library dev-reload
+    ghc-options: -Wall
+    build-depends: base
+                 , text
+                 , file-embed
+    hs-source-dirs: lib/dev-reload
+    exposed-modules: DevReload
 
 executable todomvc
     import:           shared

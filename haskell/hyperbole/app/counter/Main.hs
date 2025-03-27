@@ -4,17 +4,16 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 
-import Data.FileEmbed (embedFile)
-
 import Effectful (Dispatch (Dynamic), DispatchOf, Effect)
 import Effectful.Dispatch.Dynamic (interpret, send)
 
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 
 import Data.Text qualified as T
-import Data.Text.Encoding (decodeUtf8)
 import Web.Hyperbole hiding (input)
 import Prelude hiding (div)
+
+import DevReload (devReloadPageJs)
 
 {-
 ghcid -c 'cabal repl counter' -T :main --warnings --reload=./assets/css/counter.css
@@ -25,11 +24,6 @@ main = do
     let port = 4321 :: Int
     let staticMiddleware = staticPolicy (addBase "assets")
     run port $ staticMiddleware app
-
-reloadJs :: Text
-reloadJs =
-    decodeUtf8
-        $(embedFile "reload.js")
 
 document :: Text -> BSL.ByteString -> BSL.ByteString
 document title cnt =
@@ -42,7 +36,7 @@ document title cnt =
               rel="stylesheet">
 
         <script>
-          #{reloadJs}
+          #{devReloadPageJs}
         </script>
 
       </head>

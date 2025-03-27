@@ -4,9 +4,6 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 
-import Data.FileEmbed (embedFile)
-import Data.Text.Encoding qualified as TE
-
 import Network.Wai.Middleware.Static
 
 import Control.Monad (when)
@@ -27,6 +24,8 @@ import Web.Hyperbole hiding (input, label)
 import Web.View.Style (extClass)
 import Prelude hiding (div, span)
 
+import DevReload (devReloadPageJs)
+
 {-
 ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./assets/css/temp-converter.css
 APP_ENV=dev ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./assets/css/temp-converter.css --reload=./reload.js
@@ -44,11 +43,6 @@ main = do
     putStrLn $ "== Booting up with: " <> show appConfig
     run port $ staticMiddleware $ app appConfig
 
-reloadJs :: Text
-reloadJs =
-    TE.decodeUtf8
-        $(embedFile "reload.js")
-
 document :: Text -> BSL.ByteString -> BSL.ByteString
 document title cnt =
     [i|<html>
@@ -60,7 +54,7 @@ document title cnt =
               rel="stylesheet">
 
         <script>
-          #{reloadJs}
+          #{devReloadPageJs}
         </script>
 
       </head>

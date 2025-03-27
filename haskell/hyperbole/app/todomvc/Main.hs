@@ -18,6 +18,8 @@ import Web.View.Style (addClass, cls, extClass, prop)
 import Web.View.Types (AttValue)
 import Prelude hiding (div, span)
 
+import DevReload (devReloadPageJs)
+
 {-
 rg --files -g '!/dist*' | entr -rc cabal run todomvc
 ghcid -c 'cabal repl todomvc' -T :main --warnings
@@ -62,6 +64,10 @@ basicDocument title cnt =
 
         <link href="https://cdn.jsdelivr.net/npm/todomvc-app-css@2.4.3/index.min.css"
               rel="stylesheet">
+
+        <script>
+          #{devReloadPageJs}
+        </script>
       </head>
       <body>#{cnt}</body>
   </html>|]
