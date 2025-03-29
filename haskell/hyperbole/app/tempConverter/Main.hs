@@ -24,7 +24,9 @@ import Web.Hyperbole hiding (input, label)
 import Web.View.Style (extClass)
 import Prelude hiding (div, span)
 
+import Data.Maybe (fromMaybe)
 import DevReload (devReloadPageJs)
+import System.Environment qualified as SE
 
 {-
 ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./assets/css/temp-converter.css
@@ -33,7 +35,8 @@ APP_ENV=dev ghcid -c 'cabal repl tempConverter' -T :main --warnings --reload=./a
 
 main :: IO ()
 main = do
-    let port = 4321 :: Int
+    mStr <- SE.lookupEnv "PORT"
+    let port = fromMaybe 4321 $ readMaybe =<< mStr
     let staticMiddleware = staticPolicy (addBase "assets")
     appEnv <-
         fmap

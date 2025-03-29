@@ -19,6 +19,8 @@ import Web.View.Types (AttValue)
 import Prelude hiding (div, span)
 
 import DevReload (devReloadPageJs)
+import System.Environment qualified as SE
+import Text.Read (readMaybe)
 
 {-
 rg --files -g '!/dist*' | entr -rc cabal run todomvc
@@ -42,7 +44,8 @@ data Todo = MkTodo
 
 main :: IO ()
 main = do
-    let port = 4321 :: Int
+    mStr <- SE.lookupEnv "PORT"
+    let port = fromMaybe 4321 $ readMaybe =<< mStr
     putStrLn $ "Starting web server on port: " <> show port
     run port app
 

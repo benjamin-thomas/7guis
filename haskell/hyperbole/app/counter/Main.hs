@@ -13,7 +13,10 @@ import Data.Text qualified as T
 import Web.Hyperbole hiding (input)
 import Prelude hiding (div)
 
+import Data.Maybe (fromMaybe)
 import DevReload (devReloadPageJs)
+import System.Environment qualified as SE
+import Text.Read (readMaybe)
 
 {-
 ghcid -c 'cabal repl counter' -T :main --warnings --reload=./assets/css/counter.css
@@ -21,7 +24,8 @@ ghcid -c 'cabal repl counter' -T :main --warnings --reload=./assets/css/counter.
 
 main :: IO ()
 main = do
-    let port = 4321 :: Int
+    mStr <- SE.lookupEnv "PORT"
+    let port = fromMaybe 4321 $ readMaybe =<< mStr
     let staticMiddleware = staticPolicy (addBase "assets")
     run port $ staticMiddleware app
 
