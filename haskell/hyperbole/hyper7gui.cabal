@@ -40,6 +40,8 @@ library dev-reload
     build-depends: base
                  , text
                  , file-embed
+                 , template-haskell
+                 , filepath
     hs-source-dirs: lib/dev-reload
     exposed-modules: DevReload
 

@@ -1,7 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const reloadWs = new WebSocket('ws://localhost:4321/ws-reload');
+    const host = location.host;
+    console.log("== HOST", { host });
 
-    function showNotification(message) {
+    const reloadWs = new WebSocket(`ws://${host}/ws-reload`);
+
+    const showNotification = (message) => {
 
         const notification = document.createElement('div');
         {
@@ -17,11 +20,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         notification.innerText = message;
         document.body.appendChild(notification);
-    }
+    };
 
-    function waitTilReady(n) {
+    const waitTilReady = (n) => {
         fetch('/', { method: 'HEAD' })
-            .then(response => {
+            .then((response) => {
                 if (!response.ok)
                     throw new Error("Server seems to be broken...");
 
@@ -33,9 +36,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const ms = (n < 20) ? 50 : 1000;
                 setTimeout(() => waitTilReady(n + 1), ms);
             });
-    }
+    };
 
-    reloadWs.onclose = function () {
+    reloadWs.onclose = () => {
         console.log('Reload WebSocket closed, reloading page...');
         showNotification('Reloading in a sec...');
         waitTilReady(0);
