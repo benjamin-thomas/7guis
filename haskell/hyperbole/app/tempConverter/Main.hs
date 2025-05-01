@@ -10,17 +10,38 @@ import Control.Monad (when)
 
 -- import Data.Aeson
 
-import Data.Aeson (FromJSONKey, ToJSONKey)
 import Data.Bool (bool)
 import Data.Map (Map)
 import Data.Map qualified as M
 import Data.Text qualified as T
 import Effectful (Dispatch (Dynamic), DispatchOf, Effect)
-import Effectful.Dispatch.Dynamic
+import Effectful.Dispatch.Dynamic (interpret, send)
 import System.Environment (lookupEnv)
 import Text.Printf (printf)
 import Text.Read (readMaybe)
-import Web.Hyperbole hiding (input, label)
+import Web.Hyperbole
+    ( Application
+    , Eff
+    , Generic
+    , HyperView (Action, update)
+    , Hyperbole
+    , Mod
+    , Page
+    , View
+    , ViewAction
+    , ViewId
+    , col
+    , hyper
+    , liveApp
+    , onInput
+    , run
+    , runPage
+    , scriptEmbed
+    , tag
+    , text
+    , value
+    , type (:>)
+    )
 import Web.View.Style (extClass)
 import Prelude hiding (div, span)
 
@@ -48,21 +69,24 @@ main = do
 
 document :: Text -> BSL.ByteString -> BSL.ByteString
 document title cnt =
-    [i|<html>
-      <head>
-        <title>#{title}</title>
-        <script type="text/javascript">#{scriptEmbed}</script>
+    [i|
+<!DOCTYPE html>
+<html>
+    <head>
+    <title>#{title}</title>
+    <script type="text/javascript">#{scriptEmbed}</script>
 
-        <link href="/css/temp-converter.css"
-              rel="stylesheet">
+    <link href="/css/temp-converter.css"
+            rel="stylesheet">
 
-        <script>
-          #{devReloadPageJs}
-        </script>
+    <script>
+        #{devReloadPageJs}
+    </script>
 
-      </head>
-      <body>#{cnt}</body>
-  </html>|]
+    </head>
+    <body>#{cnt}</body>
+</html>
+|]
 
 app :: AppConfig -> Application
 app appConfig = do
@@ -172,31 +196,25 @@ instance (Config :> es) => HyperView MainView es where
         mainView $
             newModel{shouldAutofocus = False}
 
-data FormField = CelsiusField | FahrenheitField
+data FormField' = CelsiusField | FahrenheitField
     deriving
         ( Show
         , Read
         , Eq
         , Ord
         , Generic
-        , ToJSON
-        , FromJSON
-        , ToJSONKey
-        , FromJSONKey
         )
 
 data Model = MkModel
     { shouldAutofocus :: Bool
     , celsius :: Text
     , fahrenheit :: Text
-    , errFields :: Map FormField Bool
+    , errFields :: Map FormField' Bool
     }
     deriving
         ( Show
         , Read
         , Generic
-        , ToJSON
-        , FromJSON
         )
 
 isDev :: AppEnv -> Bool
@@ -228,7 +246,7 @@ mainView model = do
                     input
                         ( onChange action
                             . value val
-                            . bool id autofocus (model.shouldAutofocus)
+                            -- . bool id autofocus (model.shouldAutofocus)
                             . bool id (extClass "error") hasError'
                         )
 

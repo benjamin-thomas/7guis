@@ -11,7 +11,35 @@ import Effectful.Dispatch.Dynamic (interpret, send)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import System.Environment qualified as SE
 import Text.Read (readMaybe)
-import Web.Hyperbole hiding (input)
+import Web.Hyperbole
+    ( Application
+    , DefaultParam (..)
+    , Eff
+    , FromParam
+    , Generic
+    , HyperView (Action, update)
+    , Hyperbole
+    , Mod
+    , Page
+    , Session (sessionKey)
+    , ToParam
+    , View
+    , ViewAction
+    , ViewId
+    , att
+    , button
+    , col
+    , hyper
+    , liveApp
+    , modifySession_
+    , run
+    , runPage
+    , scriptEmbed
+    , session
+    , tag
+    , value
+    , type (:>)
+    )
 import Prelude hiding (div)
 
 {-
@@ -28,22 +56,23 @@ main = do
 document :: Text -> BSL.ByteString -> BSL.ByteString
 document title cnt =
     [i|
-   <!DOCTYPE html>
-   <html>
-      <head>
-        <title>#{title}</title>
-        <script type="text/javascript">#{scriptEmbed}</script>
+<!DOCTYPE html>
+<html>
+    <head>
+    <title>#{title}</title>
+    <script type="text/javascript">#{scriptEmbed}</script>
 
-        <link href="/css/counter.css"
-              rel="stylesheet">
+    <link href="/css/counter.css"
+            rel="stylesheet">
 
-        <script>
-          #{devReloadPageJs}
-        </script>
+    <script>
+        #{devReloadPageJs}
+    </script>
 
-      </head>
-      <body>#{cnt}</body>
-  </html>|]
+    </head>
+    <body>#{cnt}</body>
+</html>
+|]
 
 app :: Application
 app = do
@@ -67,15 +96,13 @@ newtype Counter = MkCounter Int
         , Read
         , ToParam
         , FromParam
-        , ToJSON
-        , FromJSON
         )
 
 instance Session Counter where
     sessionKey = "counter"
 
-instance Default Counter where
-    def = MkCounter 0
+instance DefaultParam Counter where
+    defaultParam = MkCounter 0
 
 data CounterEff :: Effect where
     Load :: CounterEff m Int

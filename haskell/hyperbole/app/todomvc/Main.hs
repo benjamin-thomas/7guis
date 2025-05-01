@@ -4,23 +4,44 @@ import Control.Monad (forM_)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Map (Map)
 import Data.Map.Strict qualified as M
-import Data.Maybe
-import Data.String.Interpolate
+import Data.Maybe (catMaybes, fromMaybe)
+import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Effectful
+    ( Dispatch (Dynamic)
+    , DispatchOf
+    , Effect
+    , IOE
+    , MonadIO (liftIO)
+    )
+
 import Effectful.Concurrent.STM
-import Effectful.Dispatch.Dynamic
+    ( Concurrent
+    , TVar
+    , atomically
+    , modifyTVar
+    , readTVar
+    )
+import Effectful.Dispatch.Dynamic (interpret, send)
 import Web.Hyperbole hiding (basicDocument)
-import Web.Hyperbole.Data.Param qualified as HD
-import Web.Hyperbole.View.Forms (Input (Input))
-import Web.View.Style (addClass, cls, extClass, prop)
+
+-- import Web.Hyperbole.Data.Param qualified as HD
+-- import Web.Hyperbole.View.Forms (FieldName (FieldName), Input (Input))
+import Web.View.Style
+    ( addClass
+    , cls
+    , extClass
+    , prop
+    )
 import Web.View.Types (AttValue)
 import Prelude hiding (div, span)
 
+import Data.Bool (bool)
 import DevReload (devReloadPageJs)
 import System.Environment qualified as SE
 import Text.Read (readMaybe)
+import Web.Hyperbole.Data.QueryData (Param)
 
 {-
 rg --files -g '!/dist*' | entr -rc cabal run todomvc
@@ -38,8 +59,6 @@ data Todo = MkTodo
         , Eq
         , Ord
         , Generic
-        , ToJSON
-        , FromJSON
         )
 
 main :: IO ()
@@ -60,22 +79,25 @@ updateVarReturning var f = atomically $ do
 
 basicDocument :: Text -> BSL.ByteString -> BSL.ByteString
 basicDocument title cnt =
-    [i|<html>
-      <head>
-        <title>#{title}</title>
-        <script type="text/javascript">#{scriptEmbed}</script>
+    [i|
+<!DOCTYPE html>
+<html>
+    <head>
+    <title>#{title}</title>
+    <script type="text/javascript">#{scriptEmbed}</script>
 
-        <link href="https://cdn.jsdelivr.net/npm/todomvc-app-css@2.4.3/index.min.css"
-              rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/todomvc-app-css@2.4.3/index.min.css"
+            rel="stylesheet">
 
-        <script>
-          #{devReloadPageJs}
-        </script>
-      </head>
-      <body>#{cnt}</body>
-  </html>|]
+    <script>
+        #{devReloadPageJs}
+    </script>
+    </head>
+    <body>#{cnt}</body>
+</html>
+|]
 
-filterParam :: HD.Param
+filterParam :: Param
 filterParam = "filter"
 
 data Filter
@@ -87,8 +109,6 @@ data Filter
         , Read
         , Eq
         , Generic
-        , FromJSON
-        , ToJSON
         )
 
 toFilter :: Maybe Text -> Filter
@@ -122,8 +142,8 @@ newtype TodoStore = MkTodoStore (Map Int Todo)
     deriving newtype
         ( Ord
         , Eq
-        , FromJSON
-        , ToJSON
+        , FromParam
+        , ToParam
         )
 
 instance Session TodoStore where
@@ -138,8 +158,8 @@ initStore =
         , (4, MkTodo 4 "Do the dishes" False)
         ]
 
-instance Default TodoStore where
-    def =
+instance DefaultParam TodoStore where
+    defaultParam =
         MkTodoStore initStore
 
 data TodosEff :: Effect where
@@ -170,7 +190,7 @@ type instance DispatchOf TodosEff = 'Dynamic
 
 runTodosSession ::
     forall es a.
-    (Hyperbole :> es) =>
+    (Hyperbole :> es, FromParam TodoStore, ToParam TodoStore) =>
     Eff (TodosEff : es) a ->
     Eff es a
 runTodosSession = interpret $ \_ -> \case
@@ -288,7 +308,7 @@ instance
                 pure $ todosView False FilterCompleted todos
         SubmitTodo -> do
             consoleLog "SubmitTodo" ("ENTER" :: Text)
-            fd <- formData @(TodoForm Identity)
+            fd <- formData @TodoForm
             consoleLog "FormData" (fd.descr')
             todos <- loadAll
             let furthest =
@@ -345,34 +365,36 @@ todosView shouldFocus filter' todos = do
         (klass "todoapp") -- cspell: disable-line
         ( do
             header (klass "header") $ do
-                let f :: TodoForm FieldName = fieldNames
+                let f :: TodoForm (FormField Maybe)
+                    f = formFields @TodoForm
                 h1 id "todos"
-                form SubmitTodo id $ do
-                    field f.descr' id $ do
-                        -- WARN: TextInput sets the autofocus field to "text-field" (which is not valid anyways)
-                        -- <input autocomplete="off" autofocus="" class="new-todo new-todo?" name="descr'" placeholder="What needs to be done?" type="text" value="">
-                        -- input
-                        --     TextInput
-                        --     ( extClass "new-todo?"
-                        --         . extClass "new-todo"
-                        --         . (if shouldFocus then autofocus else id)
-                        --         . value ""
-                        --         . placeholder "What needs to be done?"
-                        --         . att "autocomplete" "off"
-                        --     )
-                        -- <input autocomplete="off" autofocus="" class="new-todo" placeholder="What needs to be done?" value="">
-
-                        Input (FieldName nm) <- context
-                        tag
-                            "input"
+                form @TodoForm SubmitTodo id $ do
+                    field f.descr' (const id) $ do
+                        -- FIXME: TextInput sets the autofocus field to "text-field" (which is not valid anyways)
+                        -- FIXME: use the solution below when the latest release will have caught up with master
+                        input
+                            TextInput
                             ( extClass "new-todo"
+                                . extClass "new-todo"
                                 . (if shouldFocus then autofocus else id)
                                 . value ""
-                                . name nm
-                                . att "placeholder" "What needs to be done?"
+                                . placeholder "What needs to be done?"
                                 . att "autocomplete" "off"
                             )
-                            ""
+
+            -- FIXME: master allows me to construct my own FieldName, but not the latest release v0.4.3
+            -- FIXME: reactivate this later
+            -- Input (FieldName nm) <- context
+            -- tag
+            --     "input"
+            --     ( extClass "new-todo"
+            --         . (if shouldFocus then autofocus else id)
+            --         . value ""
+            --         . name nm
+            --         . att "placeholder" "What needs to be done?"
+            --         . att "autocomplete" "off"
+            --     )
+            --     ""
 
             main' (klass "main") $ do
                 div (klass "toggle-all-container") $ do
@@ -477,7 +499,7 @@ instance
         EnterEdit todo -> do
             pure $ todoEditView todo
         SubmitEdit old -> do
-            fd <- formData @(TodoForm Identity)
+            fd <- formData @(TodoForm)
             let new = old{descr = descr' fd}
             save new
             consoleLog "saved" new
@@ -492,20 +514,16 @@ lineThrough =
 data TodoForm f = TodoForm
     { descr' :: Field f Text
     }
-    deriving
-        ( Generic
-        , FromFormF
-        , GenFields FieldName
-        )
+    deriving (Generic)
 
--- instance Form (TodoForm Maybe)
+instance Form TodoForm Maybe
 
 todoEditView :: Todo -> View TodoView ()
 todoEditView todo = do
-    let f = fieldNames @(TodoForm)
+    let f = formFields @TodoForm
     tag "li" (klass "editing") $ do
-        form (SubmitEdit todo) id $ do
-            field f.descr' id $ do
+        form @TodoForm (SubmitEdit todo) id $ do
+            field f.descr' (const id) $ do
                 input
                     TextInput
                     ( klass "edit"
@@ -571,6 +589,12 @@ toggleCheckbox clickAction isSelected = do
 
 klass :: AttValue -> Mod c
 klass = att "class"
+
+autofocus :: Mod c
+autofocus = att "autofocus" ""
+
+checked :: Bool -> Mod c
+checked = bool id (att "checked" "")
 
 for :: AttValue -> Mod c
 for = att "for"
