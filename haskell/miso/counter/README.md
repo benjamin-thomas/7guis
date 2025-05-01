@@ -5,7 +5,7 @@ NOTE: this basic reload mechanism, gotten from the miso's README works fine with
 ### With ghcid
 
 ```
-ghcid -c 'cabal repl app' -T=Main.main --reload=./main.css
+ghcid -c 'cabal repl counter' -T=:main --reload=./counter.css
 ```
 
 ### Without ghcid
@@ -13,7 +13,7 @@ ghcid -c 'cabal repl app' -T=Main.main --reload=./main.css
 Reloading manually forces a browser refresh. And the CSS update does trigger accordingly.
 
 ```
-cabal repl app
+cabal repl counter
 ghci> :cmd return $ unlines [":reload", ":main"]
 ```
 

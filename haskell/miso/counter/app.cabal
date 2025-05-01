@@ -21,18 +21,22 @@ library lib
   build-depends: base
                , text
                , miso
+               , file-embed
                , template-haskell
-  default-language:
-    Haskell2010
+               , filepath
+  default-language: Haskell2010
+  default-extensions:
+    ImportQualifiedPost
 
-executable app
+executable counter
   import:
     wasm
   main-is:
-    Main.hs
+    CounterMain.hs
   build-depends: base
                , lib
                , miso
                , mtl
-  default-language:
-    Haskell2010
+  default-language: Haskell2010
+  default-extensions:
+    ImportQualifiedPost

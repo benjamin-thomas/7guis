@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 ----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,11 +18,11 @@ import Control.Monad.State (MonadState (get), modify)
 import Miso
 
 import Miso.Lens (Lens, lens, (+=), (^.))
-import Miso.String (MisoString, ms)
+import Miso.String (ToMisoString (toMisoString), ms)
 
 ----------------------------------------------------------------------------
 
-import Css (readCssFile)
+import Css qualified
 
 ----------------------------------------------------------------------------
 
@@ -48,9 +49,6 @@ data Action
 
 ----------------------------------------------------------------------------
 
-mainCss :: MisoString
-mainCss = $(readCssFile "./main.css")
-
 {- | Entry point for a miso application
 main :: IO ()
 main = run (startApp app)
@@ -63,7 +61,7 @@ main =
         { events = defaultEvents <> keyboardEvents
         , -- , initialAction = Just FocusOnInput
           styles =
-            [ Style mainCss
+            [ Style (toMisoString Css.counterCss)
             ]
         }
 
