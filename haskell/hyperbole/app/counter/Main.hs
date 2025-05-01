@@ -1,22 +1,18 @@
 module Main (main) where
 
 import Data.ByteString.Lazy qualified as BSL
+import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-
+import Data.Text qualified as T
+import DevReload (devReloadPageJs)
 import Effectful (Dispatch (Dynamic), DispatchOf, Effect)
 import Effectful.Dispatch.Dynamic (interpret, send)
-
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
-
-import Data.Text qualified as T
-import Web.Hyperbole hiding (input)
-import Prelude hiding (div)
-
-import Data.Maybe (fromMaybe)
-import DevReload (devReloadPageJs)
 import System.Environment qualified as SE
 import Text.Read (readMaybe)
+import Web.Hyperbole hiding (input)
+import Prelude hiding (div)
 
 {-
 ghcid -c 'cabal repl counter' -T :main --warnings --reload=./assets/css/counter.css
@@ -31,7 +27,9 @@ main = do
 
 document :: Text -> BSL.ByteString -> BSL.ByteString
 document title cnt =
-    [i|<html>
+    [i|
+   <!DOCTYPE html>
+   <html>
       <head>
         <title>#{title}</title>
         <script type="text/javascript">#{scriptEmbed}</script>
