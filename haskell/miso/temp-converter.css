@@ -1,5 +1,5 @@
 :root {
-  /* Colors */
+  /* Colors - Light Mode (default) */
   --color-primary: #3498db;
   --color-primary-dark: #2980b9;
   --color-text: #333;
@@ -11,6 +11,7 @@
   --color-error: #ffebee;
   --color-error-border: #e57373;
   --color-error-text: #c62828;
+  --color-input-bg: #ffffff;
   
   /* Spacing */
   --space-xs: 5px;
@@ -27,6 +28,24 @@
   --input-width: 120px;
   --input-height: 40px;
   --spacer-width: 36px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Colors - Dark Mode */
+    --color-primary: #2196f3;
+    --color-primary-dark: #1976d2;
+    --color-text: #e0e0e0;
+    --color-heading: #f5f5f5;
+    --color-background: #1e1e2e;
+    --color-border: #444;
+    --color-success: #1b3a27;
+    --color-success-border: #2e7d32;
+    --color-error: #3e1a1a;
+    --color-error-border: #c62828;
+    --color-error-text: #ef5350;
+    --color-input-bg: #2a2a3a;
+  }
 }
 
 body {
@@ -80,6 +99,8 @@ input {
   height: var(--input-height);
   box-sizing: border-box;
   font-size: 16px;
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
 }
 
 .input.error {
