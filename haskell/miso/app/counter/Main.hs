@@ -4,7 +4,6 @@
 ----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 ----------------------------------------------------------------------------
 -- Exhaustiveness checks
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -68,9 +67,7 @@ main =
 ----------------------------------------------------------------------------
 
 -- | WASM export, required when compiling w/ the WASM backend.
-#ifdef WASM
-foreign export javascript "hs_start" main :: IO ()
-#endif
+
 ----------------------------------------------------------------------------
 
 -- | `defaultApp` takes as arguments the initial model, update function, view function
