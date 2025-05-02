@@ -123,13 +123,15 @@ tempInput field validation onInput' =
 view' :: Model -> View Msg
 view' model' =
     div_
-        []
+        [class_ "app-container"]
         [ h1_ [] [text "Temperature Converter"]
-        , pre_ [] [text $ toMisoString $ show model']
-        , button_ [onClick $ Focus Celsius] [text "Focus Celsius"]
-        , button_ [onClick $ Focus Fahrenheit] [text "Focus Fahrenheit"]
         , div_
-            []
+            [class_ "button-container"]
+            [ button_ [onClick $ Focus Celsius] [text "Focus Celsius"]
+            , button_ [onClick $ Focus Fahrenheit] [text "Focus Fahrenheit"]
+            ]
+        , div_
+            [class_ "converter-container"]
             [ tempInput Celsius (celsius model') CelsiusChanged
             , text "Celsius"
             , text " = "
@@ -147,6 +149,7 @@ view' model' =
                     , text "F"
                     ]
             _ -> p_ [class_ "error"] [text "Cannot compute temperature due to bad data"]
+        , pre_ [styleInline_ "margin-top:30px"] [text $ toMisoString $ show model']
         ]
 
 app :: String -> App Model Msg

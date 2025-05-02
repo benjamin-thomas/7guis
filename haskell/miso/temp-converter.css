@@ -1,7 +1,111 @@
-.input.error { 
-    background-color: red;
+:root {
+  /* Colors */
+  --color-primary: #3498db;
+  --color-primary-dark: #2980b9;
+  --color-text: #333;
+  --color-heading: #2c3e50;
+  --color-background: #f7f9fc;
+  --color-border: #ddd;
+  --color-success: #e8f5e9;
+  --color-success-border: #81c784;
+  --color-error: #ffebee;
+  --color-error-border: #e57373;
+  --color-error-text: #c62828;
+  
+  /* Spacing */
+  --space-xs: 5px;
+  --space-sm: 8px;
+  --space-md: 10px;
+  --space-lg: 15px;
+  --space-xl: 20px;
+  --space-xxl: 25px;
+  
+  /* Border radius */
+  --radius: 4px;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: var(--space-xl);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+h1 {
+  color: var(--color-heading);
+  text-align: center;
+  margin-bottom: var(--space-xxl);
+  font-size: 28px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-md) 0;
+}
+
+button {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  margin: 0 var(--space-xs);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+input {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin: 0 var(--space-sm);
+  width: 80px;
+}
+
+.input.error {
+  background-color: var(--color-error);
+  border: 1px solid var(--color-error-border);
+}
+
+.converter-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: var(--space-lg) 0;
+}
+
+p, p.error {
+  width: 100%;
+  min-height: 24px;
+  margin: var(--space-lg) 0;
+  padding: var(--space-md);
+  border-radius: var(--radius);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+p {
+  background-color: var(--color-success);
+  border: 1px solid var(--color-success-border);
 }
 
 p.error {
-    border: 1px solid red;
+  background-color: var(--color-error);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error-text);
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
