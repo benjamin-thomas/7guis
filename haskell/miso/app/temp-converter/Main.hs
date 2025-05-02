@@ -127,16 +127,29 @@ view' model' =
         [ h1_ [] [text "Temperature Converter"]
         , div_
             [class_ "button-container"]
-            [ button_ [onClick $ Focus Celsius] [text "Focus Celsius"]
-            , button_ [onClick $ Focus Fahrenheit] [text "Focus Fahrenheit"]
+            [ div_
+                [class_ "input-group"]
+                [button_ [onClick $ Focus Celsius] [text "Focus Celsius"]]
+            , div_ [class_ "equals-container"] []
+            , div_
+                [class_ "input-group"]
+                [button_ [onClick $ Focus Fahrenheit] [text "Focus Fahrenheit"]]
             ]
         , div_
             [class_ "converter-container"]
-            [ tempInput Celsius (celsius model') CelsiusChanged
-            , text "Celsius"
-            , text " = "
-            , tempInput Fahrenheit (fahrenheit model') FahrenheitChanged
-            , text "Fahrenheit"
+            [ div_
+                [class_ "input-group"]
+                [ tempInput Celsius (celsius model') CelsiusChanged
+                , span_ [class_ "unit-label"] [text "Celsius"]
+                ]
+            , div_
+                [class_ "equals-container"]
+                [span_ [] [text "="]]
+            , div_
+                [class_ "input-group"]
+                [ tempInput Fahrenheit (fahrenheit model') FahrenheitChanged
+                , span_ [class_ "unit-label"] [text "Fahrenheit"]
+                ]
             ]
         , case (celsius model', fahrenheit model') of
             (NotSet, NotSet) -> text ""
