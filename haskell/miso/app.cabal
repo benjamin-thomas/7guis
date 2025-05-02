@@ -48,4 +48,6 @@ executable temp-converter
                , mtl
                , text
                , containers
+               , jsaddle
+               , time
   default-language: Haskell2010

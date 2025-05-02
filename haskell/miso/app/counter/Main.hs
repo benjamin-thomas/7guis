@@ -97,7 +97,7 @@ update' = \case
     model <- get
     noEff
       model
-        { _counter = (_counter model) * 2
+        { _counter = _counter model * 2
         }
   Halve ->
     modify $ \model ->

@@ -3,12 +3,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Main (main) where
 
 import Control.Monad.State
 import Data.Text qualified as T
+import Language.Javascript.JSaddle
 import Miso
 import Miso.String
     ( Text
@@ -29,6 +30,25 @@ data Validation a
     | Invalid a
     deriving (Eq, Show)
 
+-- sideEffectTest :: Effect model action
+sideEffectTest :: JSM ()
+sideEffectTest = setLocalStorage "hello" ("world" :: Text)
+
+-- This is not working when I compile with GHC (vs GHCJS, or WASM??)
+#ifdef GHCJS_NEW
+foreign import javascript unsafe "Date.now()"
+    getNow2 :: JSM Double
+#else
+getNow2 :: JSM Double
+-- below can **not** work with Miso. At best, I can define an IO Double here, not a JSM Double
+-- getNow2 = round . (*1000) <$> getPOSIXTime
+getNow2 = pure 0
+#endif
+
+-- This works when compiling with GHC (see the jsaddle project)
+getNow3 :: JSM Int
+getNow3 = fromJSValUnchecked =<< (jsg ("Date" :: Text) # ("now" :: Text) $ ())
+
 unvalidate :: (Monoid a) => Validation a -> a
 unvalidate (Valid a) = a
 unvalidate (Invalid a) = a
@@ -42,21 +62,30 @@ data Model = Model
     { celsius :: Validation Text
     , fahrenheit :: Validation Text
     , editing :: Field
+    , now1 :: Double
+    , now2 :: Double
+    , now3 :: Int
     }
     deriving (Eq, Show)
 
-init' :: Field -> Model
-init' field =
+init' :: Field -> Double -> Model
+init' field t =
     Model
         { celsius = NotSet
         , fahrenheit = NotSet
         , editing = field
+        , now1 = t
+        , now2 = 0
+        , now3 = 0
         }
 
 data Msg
     = Focus Field
     | CelsiusChanged Text
     | FahrenheitChanged Text
+    | GotTime1 Double
+    | GotTime2 Double
+    | GotTime3 Int
 
 instance ToMisoString Field where
     toMisoString Celsius = "celsius"
@@ -67,9 +96,33 @@ fmt x = T.pack $ printf "%0.2f" x
 
 update' :: Msg -> Effect Model Msg
 update' = \case
+    GotTime1 t -> modify $ \m -> m{now1 = t}
+    GotTime2 t -> modify $ \m -> m{now2 = t}
+    GotTime3 t -> modify $ \m -> m{now3 = t}
     Focus field -> do
         io $ focus (toMisoString field)
         modify $ \m -> m{editing = field}
+
+        -- Keeping for ref: various syntax to do the same thing
+        -- NOTE: to schedule an Effect, I need to send the latest model with the schedule request.
+        -- m <- get
+        -- m <# do
+        --     t <- now
+        --     pure $ GotTime t
+
+        -- get >>= \model' ->
+        --     model' <# (GotTime <$> now)
+
+        -- get >>= ((GotTime <$> now) #>)
+
+        io sideEffectTest
+        flip
+            batchEff
+            [ GotTime1 <$> now
+            , GotTime2 <$> getNow2
+            , GotTime3 <$> getNow3
+            ]
+            =<< get
     CelsiusChanged txt ->
         modify $ \oldModel ->
             let newModel = oldModel{editing = Celsius}
@@ -80,10 +133,10 @@ update' = \case
                             newModel
                                 { celsius = Invalid txt
                                 }
-                        Just val ->
+                        Just val' ->
                             newModel
                                 { celsius = Valid txt
-                                , fahrenheit = Valid . fmt $ celsiusToFahrenheit val
+                                , fahrenheit = Valid . fmt $ celsiusToFahrenheit val'
                                 }
     FahrenheitChanged txt ->
         modify $ \oldModel ->
@@ -95,10 +148,10 @@ update' = \case
                             newModel
                                 { fahrenheit = Invalid txt
                                 }
-                        Just val ->
+                        Just val' ->
                             newModel
                                 { fahrenheit = Valid txt
-                                , celsius = Valid . fmt $ fahrenheitToCelsius val
+                                , celsius = Valid . fmt $ fahrenheitToCelsius val'
                                 }
 
 celsiusToFahrenheit :: Float -> Float
@@ -165,10 +218,10 @@ view' model' =
         , pre_ [styleInline_ "margin-top:30px"] [text $ toMisoString $ show model']
         ]
 
-app :: String -> App Model Msg
-app css =
+app :: String -> Double -> App Model Msg
+app css t =
     let toFocus = Celsius
-     in (defaultApp (init' toFocus) update' view')
+     in (defaultApp (init' toFocus t) update' view')
             { initialAction = Just (Focus toFocus)
             , styles =
                 [ Style (toMisoString css)
@@ -178,4 +231,6 @@ app css =
 main :: IO ()
 main = do
     css <- readFile "temp-converter.css"
-    run $ startApp (app css)
+    run $ do
+        t <- now
+        startApp (app css t)
