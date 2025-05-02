@@ -10,7 +10,12 @@ module Main (main) where
 import Control.Monad.State
 import Data.Text qualified as T
 import Miso
-import Miso.String (Text, ToMisoString (toMisoString), toMisoString)
+import Miso.String
+    ( Text
+    , ToMisoString (toMisoString)
+    , toMisoString
+    )
+import Text.Printf (printf)
 import Text.Read (readMaybe)
 
 data Field
@@ -19,13 +24,15 @@ data Field
     deriving (Eq, Show)
 
 data Validation a
-    = Valid a
+    = NotSet
+    | Valid a
     | Invalid a
     deriving (Eq, Show)
 
-unvalidate :: Validation a -> a
+unvalidate :: (Monoid a) => Validation a -> a
 unvalidate (Valid a) = a
 unvalidate (Invalid a) = a
+unvalidate NotSet = mempty
 
 isInvalid :: Validation a -> Bool
 isInvalid (Invalid _) = True
@@ -41,8 +48,8 @@ data Model = Model
 init' :: Field -> Model
 init' field =
     Model
-        { celsius = Valid ""
-        , fahrenheit = Valid ""
+        { celsius = NotSet
+        , fahrenheit = NotSet
         , editing = field
         }
 
@@ -55,6 +62,9 @@ instance ToMisoString Field where
     toMisoString Celsius = "celsius"
     toMisoString Fahrenheit = "fahrenheit"
 
+fmt :: Float -> Text
+fmt x = T.pack $ printf "%0.2f" x
+
 update' :: Msg -> Effect Model Msg
 update' = \case
     Focus field -> do
@@ -63,29 +73,33 @@ update' = \case
     CelsiusChanged txt ->
         modify $ \oldModel ->
             let newModel = oldModel{editing = Celsius}
-             in case readMaybe (T.unpack txt) of
-                    Nothing ->
-                        newModel
-                            { celsius = Invalid txt
-                            }
-                    Just val ->
-                        newModel
-                            { celsius = Valid txt
-                            , fahrenheit = Valid . tshow $ celsiusToFahrenheit val
-                            }
+             in if T.null txt
+                    then newModel{celsius = NotSet}
+                    else case readMaybe (T.unpack txt) of
+                        Nothing ->
+                            newModel
+                                { celsius = Invalid txt
+                                }
+                        Just val ->
+                            newModel
+                                { celsius = Valid txt
+                                , fahrenheit = Valid . fmt $ celsiusToFahrenheit val
+                                }
     FahrenheitChanged txt ->
         modify $ \oldModel ->
             let newModel = oldModel{editing = Fahrenheit}
-             in case readMaybe (T.unpack txt) of
-                    Nothing ->
-                        newModel
-                            { fahrenheit = Invalid txt
-                            }
-                    Just val ->
-                        newModel
-                            { fahrenheit = Valid txt
-                            , celsius = Valid . tshow $ fahrenheitToCelsius val
-                            }
+             in if T.null txt
+                    then newModel{fahrenheit = NotSet}
+                    else case readMaybe (T.unpack txt) of
+                        Nothing ->
+                            newModel
+                                { fahrenheit = Invalid txt
+                                }
+                        Just val ->
+                            newModel
+                                { fahrenheit = Valid txt
+                                , celsius = Valid . fmt $ fahrenheitToCelsius val
+                                }
 
 celsiusToFahrenheit :: Float -> Float
 celsiusToFahrenheit c = c * 9 / 5 + 32
@@ -93,14 +107,12 @@ celsiusToFahrenheit c = c * 9 / 5 + 32
 fahrenheitToCelsius :: Float -> Float
 fahrenheitToCelsius f = (f - 32) * 5 / 9
 
-tshow :: (Show a) => a -> Text
-tshow = T.pack . show
-
 tempInput :: Field -> Validation Text -> (Text -> msg) -> View msg
 tempInput field validation onInput' =
     input_
         [ id_ $ toMisoString field
         , onInput onInput'
+        , autocomplete_ False
         , classList_
             [ ("input", True)
             , ("error", isInvalid validation)
@@ -114,8 +126,8 @@ view' model' =
         []
         [ h1_ [] [text "Temperature Converter"]
         , pre_ [] [text $ toMisoString $ show model']
-        , button_ [onClick $ Focus Celsius] [text "Focus1"]
-        , button_ [onClick $ Focus Fahrenheit] [text "Focus2"]
+        , button_ [onClick $ Focus Celsius] [text "Focus Celsius"]
+        , button_ [onClick $ Focus Fahrenheit] [text "Focus Fahrenheit"]
         , div_
             []
             [ tempInput Celsius (celsius model') CelsiusChanged
@@ -124,6 +136,17 @@ view' model' =
             , tempInput Fahrenheit (fahrenheit model') FahrenheitChanged
             , text "Fahrenheit"
             ]
+        , case (celsius model', fahrenheit model') of
+            (NotSet, NotSet) -> text ""
+            (Valid c, Valid f) ->
+                p_
+                    [class_ ""] -- If I don't set the class empty here specifically, then the prior "error" state may persist in this node
+                    [ text c
+                    , text "C = "
+                    , text f
+                    , text "F"
+                    ]
+            _ -> p_ [class_ "error"] [text "Cannot compute temperature due to bad data"]
         ]
 
 app :: String -> App Model Msg
