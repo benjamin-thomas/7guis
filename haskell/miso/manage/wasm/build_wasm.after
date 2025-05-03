@@ -1,0 +1,109 @@
+#!/bin/bash
+
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RESET='\033[0m'
+
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+set -e
+
+PROJECT="$1"
+
+[ -z "$PROJECT" ] && die "usage: $0 PROJECT"
+
+if [ "$CLEAN" = "1" ] && [ -d "./$PROJECT.wasmexe" ]; then
+  echo -e "${YELLOW}== Destroying prior builds...${RESET}"
+  rm -r "./$PROJECT.wasmexe"
+fi
+
+wasm32-wasi-cabal build --allow-newer --project-file=cabal.project.wasm
+
+OUTPUT_DIR="dist/$PROJECT.wasmexe"
+
+[ -d "$OUTPUT_DIR" ] || mkdir -pv "$OUTPUT_DIR"
+
+INPUT=$(wasm32-wasi-cabal list-bin $PROJECT)
+
+# This command produces `ghc_wasm_jsffi.js`, which ensures our FFI works properly.
+$(wasm32-wasi-ghc --print-libdir)/post-link.mjs \
+  --input "$INPUT" \
+  --output "$OUTPUT_DIR/ghc_wasm_jsffi.js"
+
+# This copies the WASM payload into the output directory
+cp -v "$INPUT" "$OUTPUT_DIR"
+
+cat <<EOF >"$OUTPUT_DIR/index.html"
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WASM $PROJECT</title>
+  </head>
+  <body>
+    <script src="index.js" type="module"></script>
+  </body>
+</html>
+EOF
+
+cat <<'EOF' >"$OUTPUT_DIR/index.js.template"
+import { WASI, OpenFile, File, ConsoleStdout } from "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.3.0/dist/index.js";
+import ghc_wasm_jsffi from "./ghc_wasm_jsffi.js";
+
+const args = [];
+const env = ["GHCRTS=-H64m"];
+const fds = [
+  new OpenFile(new File([])), // stdin
+  ConsoleStdout.lineBuffered((msg) => console.log(`[WASI stdout] ${msg}`)),
+  ConsoleStdout.lineBuffered((msg) => console.warn(`[WASI stderr] ${msg}`)),
+];
+const options = { debug: false };
+const wasi = new WASI(args, env, fds, options);
+
+const instance_exports = {};
+const { instance } = await WebAssembly.instantiateStreaming(fetch("__PROJECT__"), {
+  wasi_snapshot_preview1: wasi.wasiImport,
+  ghc_wasm_jsffi: ghc_wasm_jsffi(instance_exports),
+});
+Object.assign(instance_exports, instance.exports);
+
+wasi.initialize(instance);
+await instance.exports.hs_start(globalThis.example);
+EOF
+
+sed "s/__PROJECT__/$PROJECT.wasm/g" "$OUTPUT_DIR/index.js.template" >"$OUTPUT_DIR/index.js"
+
+gzip -kf "$OUTPUT_DIR/ghc_wasm_jsffi.js"
+gzip -kf "$OUTPUT_DIR/index.js"
+gzip -kf "$OUTPUT_DIR/index.html"
+gzip -kf "$OUTPUT_DIR/$PROJECT.wasm"
+
+# I'm not sure if optimizing the GHC-produced WASM output this way is "safe".
+if [ "$OPTIMIZE" = "1" ]; then
+  echo -e "${YELLOW}== Optimizing...${RESET}"
+  wasm-opt -Oz -o "$OUTPUT_DIR/$PROJECT-optimized.wasm" "$OUTPUT_DIR/$PROJECT.wasm"
+  gzip -kf "$OUTPUT_DIR/$PROJECT-optimized.wasm"
+  mv -v "$OUTPUT_DIR/$PROJECT-optimized.wasm.gz" "$OUTPUT_DIR/$PROJECT.wasm.gz"
+  mv -v "$OUTPUT_DIR/$PROJECT-optimized.wasm" "$OUTPUT_DIR/$PROJECT.wasm"
+fi
+
+echo
+echo "Build complete!"
+echo
+ls -lhS --color=always "$OUTPUT_DIR"
+echo
+echo
+echo "Now you can serve the app via:"
+echo -e "${GREEN}npx http-server $OUTPUT_DIR --gzip${RESET}"
+echo
+
+# Just for convenience, when iterating in dev...
+if [ "$SERVE" = "1" ]; then
+  echo -e "${YELLOW}== Serving...${RESET}"
+  npx http-server "$OUTPUT_DIR" --gzip
+fi

@@ -48,6 +48,11 @@ data Action
 
 ----------------------------------------------------------------------------
 
+-- | WASM export, required when compiling w/ the WASM backend.
+#ifdef WASM
+foreign export javascript "hs_start" main :: IO ()
+#endif
+
 {- | Entry point for a miso application
 main :: IO ()
 main = run (startApp app)

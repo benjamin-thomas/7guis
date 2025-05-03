@@ -8,14 +8,18 @@
 module Main (main) where
 
 import Control.Monad.State
-import Data.Text qualified as T
+
+#ifdef WASM
+import Css qualified
+#endif
 import Language.Javascript.JSaddle
 import Miso
 import Miso.String
-    ( Text
-    , ToMisoString (toMisoString)
+    ( MisoString
+    , ToMisoString
     , toMisoString
     )
+import Miso.String qualified as MS
 import Text.Printf (printf)
 import Text.Read (readMaybe)
 
@@ -32,7 +36,7 @@ data Validation a
 
 -- sideEffectTest :: Effect model action
 sideEffectTest :: JSM ()
-sideEffectTest = setLocalStorage "hello" ("world" :: Text)
+sideEffectTest = setLocalStorage "hello" ("world" :: MisoString)
 
 -- This is not working when I compile with GHC (vs GHCJS, or WASM??)
 #ifdef GHCJS_NEW
@@ -47,7 +51,7 @@ getNow2 = pure 0
 
 -- This works when compiling with GHC (see the jsaddle project)
 getNow3 :: JSM Int
-getNow3 = fromJSValUnchecked =<< (jsg ("Date" :: Text) # ("now" :: Text) $ ())
+getNow3 = fromJSValUnchecked =<< (jsg ("Date" :: MisoString) # ("now" :: MisoString) $ ())
 
 unvalidate :: (Monoid a) => Validation a -> a
 unvalidate (Valid a) = a
@@ -59,8 +63,8 @@ isInvalid (Invalid _) = True
 isInvalid _ = False
 
 data Model = Model
-    { celsius :: Validation Text
-    , fahrenheit :: Validation Text
+    { celsius :: Validation MisoString
+    , fahrenheit :: Validation MisoString
     , editing :: Field
     , now1 :: Double
     , now2 :: Double
@@ -81,8 +85,8 @@ init' field t =
 
 data Msg
     = Focus Field
-    | CelsiusChanged Text
-    | FahrenheitChanged Text
+    | CelsiusChanged MisoString
+    | FahrenheitChanged MisoString
     | GotTime1 Double
     | GotTime2 Double
     | GotTime3 Int
@@ -91,8 +95,8 @@ instance ToMisoString Field where
     toMisoString Celsius = "celsius"
     toMisoString Fahrenheit = "fahrenheit"
 
-fmt :: Float -> Text
-fmt x = T.pack $ printf "%0.2f" x
+fmt :: Float -> MisoString
+fmt x = MS.pack $ printf "%0.2f" x
 
 update' :: Msg -> Effect Model Msg
 update' = \case
@@ -126,9 +130,9 @@ update' = \case
     CelsiusChanged txt ->
         modify $ \oldModel ->
             let newModel = oldModel{editing = Celsius}
-             in if T.null txt
+             in if MS.null txt
                     then newModel{celsius = NotSet}
-                    else case readMaybe (T.unpack txt) of
+                    else case readMaybe (MS.unpack txt) of
                         Nothing ->
                             newModel
                                 { celsius = Invalid txt
@@ -141,9 +145,9 @@ update' = \case
     FahrenheitChanged txt ->
         modify $ \oldModel ->
             let newModel = oldModel{editing = Fahrenheit}
-             in if T.null txt
+             in if MS.null txt
                     then newModel{fahrenheit = NotSet}
-                    else case readMaybe (T.unpack txt) of
+                    else case readMaybe (MS.unpack txt) of
                         Nothing ->
                             newModel
                                 { fahrenheit = Invalid txt
@@ -160,7 +164,7 @@ celsiusToFahrenheit c = c * 9 / 5 + 32
 fahrenheitToCelsius :: Float -> Float
 fahrenheitToCelsius f = (f - 32) * 5 / 9
 
-tempInput :: Field -> Validation Text -> (Text -> msg) -> View msg
+tempInput :: Field -> Validation MisoString -> (MisoString -> msg) -> View msg
 tempInput field validation onInput' =
     input_
         [ id_ $ toMisoString field
@@ -170,7 +174,7 @@ tempInput field validation onInput' =
             [ ("input", True)
             , ("error", isInvalid validation)
             ]
-        , value_ $ unvalidate validation
+        , value_ $ toMisoString $ unvalidate validation
         ]
 
 view' :: Model -> View Msg
@@ -209,28 +213,40 @@ view' model' =
             (Valid c, Valid f) ->
                 p_
                     [class_ ""] -- If I don't set the class empty here specifically, then the prior "error" state may persist in this node
-                    [ text c
+                    [ text (toMisoString c)
                     , text "C = "
-                    , text f
+                    , text (toMisoString f)
                     , text "F"
                     ]
             _ -> p_ [class_ "error"] [text "Cannot compute temperature due to bad data"]
         , pre_ [styleInline_ "margin-top:30px"] [text $ toMisoString $ show model']
         ]
 
-app :: String -> Double -> App Model Msg
+app :: MisoString -> Double -> App Model Msg
 app css t =
     let toFocus = Celsius
      in (defaultApp (init' toFocus t) update' view')
             { initialAction = Just (Focus toFocus)
             , styles =
-                [ Style (toMisoString css)
+                [ Style css
                 ]
             }
 
+getCss :: IO MisoString
+#ifdef WASM
+getCss = pure $ toMisoString Css.tempConverterCss
+#else
+getCss = toMisoString <$> readFile "temp-converter.css"
+#endif
+
 main :: IO ()
 main = do
-    css <- readFile "temp-converter.css"
+    css <- getCss
     run $ do
         t <- now
         startApp (app css t)
+
+-- | WASM export, required when compiling w/ the WASM backend.
+#ifdef WASM
+foreign export javascript "hs_start" main :: IO ()
+#endif
