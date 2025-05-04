@@ -1,0 +1,19 @@
+#!/bin/bash
+
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RESET='\033[0m'
+
+set -e
+
+# FIXME: This suggestion from master is currently broken (not cached, it takes **hours** to build)
+# nix-env -iA pkgs.pkgsCross.ghcjs.haskell.packages.ghc9122.ghc -f https://github.com/NixOS/nixpkgs/archive/65f179f903e8bbeff3215cd613bdc570940c0eab.tar.gz
+
+nix-env -iA pkgs.pkgsCross.ghcjs.haskell.packages.ghc9122.ghc -f https://github.com/alexfmpe/nixpkgs/archive/b594b289740a2bc917ed9c66fef5d905f389cb96.tar.gz
+
+echo
+echo -e "${GREEN}== GHCJS is available globally now.${RESET}"
+echo
+
+javascript-unknown-ghcjs-ghc --version

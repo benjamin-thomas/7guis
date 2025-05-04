@@ -21,13 +21,14 @@ if [ "$CLEAN" = "1" ] && [ -d "./$PROJECT.wasmexe" ]; then
   rm -r "./$PROJECT.wasmexe"
 fi
 
-wasm32-wasi-cabal build --allow-newer --project-file=cabal.project.wasm
+# wasm32-wasi-cabal update
+wasm32-wasi-cabal build $PROJECT --allow-newer --project-file=cabal.project.wasm
 
 OUTPUT_DIR="dist/$PROJECT.wasmexe"
 
 [ -d "$OUTPUT_DIR" ] || mkdir -pv "$OUTPUT_DIR"
 
-INPUT=$(wasm32-wasi-cabal list-bin $PROJECT)
+INPUT=$(wasm32-wasi-cabal list-bin $PROJECT --project-file=cabal.project.wasm)
 
 # This command produces `ghc_wasm_jsffi.js`, which ensures our FFI works properly.
 $(wasm32-wasi-ghc --print-libdir)/post-link.mjs \

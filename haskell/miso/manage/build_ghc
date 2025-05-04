@@ -1,3 +1,20 @@
 #!/bin/bash
 
-cabal build
+set -e
+
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+RESET='\033[0m'
+
+die() {
+    echo -e "${RED}$@${RESET}" >&2
+    exit 1
+}
+
+PROJECT="$1"
+
+[ -z "$PROJECT" ] && die "usage: $0 PROJECT"
+
+cabal build $PROJECT

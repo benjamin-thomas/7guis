@@ -1,0 +1,61 @@
+#!/bin/bash
+
+set -e
+
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+RESET='\033[0m'
+
+die() {
+    echo -e "${RED}$@${RESET}" >&2
+    exit 1
+}
+
+if ! command -v javascript-unknown-ghcjs-ghc &>/dev/null; then
+    die "javascript-unknown-ghcjs-ghc could not be found. Please run ./manage/build_ghcjs.once first."
+fi
+
+PROJECT="$1"
+
+[ -z "$PROJECT" ] && die "usage: $0 PROJECT"
+
+# if [ "$CLEAN" = "1" ] && [ -d "./$PROJECT.wasmexe" ]; then
+#     echo -e "${YELLOW}== Destroying prior builds...${RESET}"
+#     rm -r "./$PROJECT.wasmexe"
+# fi
+
+echo -e "== If encountering problems, be sure to run: ${YELLOW}cabal update$ --project-file=cabal.project.ghcjs${RESET}"
+
+# Compilation fails if this env var is not set. That's because emscripten then
+# tries to write to /nix/* path, in the default installation folder.
+EM_CACHE=$HOME/.cache/emscripten cabal build $PROJECT --allow-newer --project-file=cabal.project.ghcjs # --ghcjs-options=-O2
+
+OUTPUT_DIR=$(cabal list-bin $PROJECT --project-file=cabal.project.ghcjs).jsexe
+
+# Running the Closure Compiler seems to pretty much nothing in terms of space savings.
+# if [ "$OPTIMIZE" = "1" ]; then
+#     echo -e "${YELLOW}== Optimizing...${RESET}"
+#     npx google-closure-compiler --js="$OUTPUT_DIR/all.js" --js_output_file="$OUTPUT_DIR/all.js"
+# fi
+
+gzip -kf "$OUTPUT_DIR/all.js" # 12MB -> 600KB!  -O2 flag does not seem to do much here.
+gzip -kf "$OUTPUT_DIR/index.html"
+
+echo
+echo "Build complete!"
+echo
+ls -lhS --color=always "$OUTPUT_DIR"
+echo
+echo
+echo "Now you can serve the app via:"
+OUTPUT_DIR_RELATIVE=./${OUTPUT_DIR#$PWD/}
+echo -e "${GREEN}npx http-server $OUTPUT_DIR_RELATIVE --gzip${RESET}"
+echo
+
+# Just for convenience, when iterating in dev...
+if [ "$SERVE" = "1" ]; then
+    echo -e "${YELLOW}== Serving...${RESET}"
+    npx http-server "$OUTPUT_DIR" --gzip
+fi

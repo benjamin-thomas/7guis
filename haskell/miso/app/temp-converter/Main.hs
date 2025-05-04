@@ -9,9 +9,10 @@ module Main (main) where
 
 import Control.Monad.State
 
-#ifdef WASM
+#if defined(GHCJS_BOTH) || defined(WASM)
 import Css qualified
 #endif
+
 import Language.Javascript.JSaddle
 import Miso
 import Miso.String
@@ -233,7 +234,7 @@ app css t =
             }
 
 getCss :: IO MisoString
-#ifdef WASM
+#if defined(GHCJS_BOTH) || defined(WASM)
 getCss = pure $ toMisoString Css.tempConverterCss
 #else
 getCss = toMisoString <$> readFile "temp-converter.css"
