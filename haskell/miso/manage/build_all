@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -e
+
+RED='\033[0;31m'
+MAGENTA='\033[0;35m'
+RESET='\033[0m'
+
+die() {
+    echo -e "${RED}$@${RESET}" >&2
+    exit 1
+}
+
+PROJECT="$1"
+
+[ -z "$PROJECT" ] && die "usage: $0 PROJECT"
+
+echo -e "${MAGENTA}== Building for GHC...${RESET}"
+./manage/build_ghc $PROJECT
+
+echo -e "${MAGENTA}== Building for GHCJS...${RESET}"
+./manage/build_ghcjs $PROJECT
+
+echo -e "${MAGENTA}== Building for WASM...${RESET}"
+./manage/build_wasm $PROJECT
+
+echo "---"
+echo "To serve locally, run:"
+echo
+echo "  For GHC:"
+echo -e "    ${MAGENTA}PORT=8080 \$(cabal list-bin $PROJECT)${RESET}"
+echo
+echo "  For GHCJS:"
+echo -e "    ${MAGENTA}npx http-server \$(cabal list-bin $PROJECT --project-file=cabal.project.ghcjs).jsexe --gzip --port 8081${RESET}"
+echo
+echo "  For WASM:"
+echo -e "    ${MAGENTA}npx http-server dist/$PROJECT.wasmexe --gzip --port 8082${RESET}"

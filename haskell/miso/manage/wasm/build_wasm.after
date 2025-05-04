@@ -21,6 +21,8 @@ if [ "$CLEAN" = "1" ] && [ -d "./$PROJECT.wasmexe" ]; then
   rm -r "./$PROJECT.wasmexe"
 fi
 
+echo -e "== If encountering problems, be sure to run: ${YELLOW}wasm32-wasi-cabal build${RESET}"
+echo -e "== Note that there seems to be a bug in wasm32-wasi-cabal, I have to build twice on empty ./dist-newstyle"
 # wasm32-wasi-cabal update
 wasm32-wasi-cabal build $PROJECT --allow-newer --project-file=cabal.project.wasm
 
