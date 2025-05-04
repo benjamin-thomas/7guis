@@ -9,7 +9,7 @@ module Main (main) where
 
 import Control.Monad.State
 
-#if defined(GHCJS_BOTH) || defined(WASM)
+#if defined(GHCJS) || defined(WASM)
 import Css qualified
 #endif
 
@@ -40,7 +40,7 @@ sideEffectTest :: JSM ()
 sideEffectTest = setLocalStorage "hello" ("world" :: MisoString)
 
 -- This is not working when I compile with GHC (vs GHCJS, or WASM??)
-#ifdef GHCJS_NEW
+#ifdef GHCJS
 foreign import javascript unsafe "Date.now()"
     getNow2 :: JSM Double
 #else
@@ -178,11 +178,22 @@ tempInput field validation onInput' =
         , value_ $ toMisoString $ unvalidate validation
         ]
 
+platform :: MisoString
+#if defined(GHCJS)
+platform = "GHCJS"
+#elif defined(WASM)
+platform = "WASM"
+#elif defined(__GLASGOW_HASKELL__)
+platform = "GHC"
+#else
+platform = "Unknown"
+#endif
+
 view' :: Model -> View Msg
 view' model' =
     div_
         [class_ "app-container"]
-        [ h1_ [] [text "Temperature Converter"]
+        [ h1_ [] [text $ "Temperature Converter" <> " (" <> platform <> ")"]
         , div_
             [class_ "button-container"]
             [ div_
@@ -234,7 +245,7 @@ app css t =
             }
 
 getCss :: IO MisoString
-#if defined(GHCJS_BOTH) || defined(WASM)
+#if defined(GHCJS) || defined(WASM)
 getCss = pure $ toMisoString Css.tempConverterCss
 #else
 getCss = toMisoString <$> readFile "temp-converter.css"

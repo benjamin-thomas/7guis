@@ -30,7 +30,7 @@ echo -e "== If encountering problems, be sure to run: ${YELLOW}cabal update$ --p
 
 # Compilation fails if this env var is not set. That's because emscripten then
 # tries to write to /nix/* path, in the default installation folder.
-EM_CACHE=$HOME/.cache/emscripten cabal build $PROJECT --allow-newer --project-file=cabal.project.ghcjs # --ghcjs-options=-O2
+EM_CACHE=$HOME/.cache/emscripten cabal build $PROJECT --allow-newer --project-file=cabal.project.ghcjs --ghc-options="-DGHCJS" # --ghcjs-options=-O2
 
 OUTPUT_DIR=$(cabal list-bin $PROJECT --project-file=cabal.project.ghcjs).jsexe
 
