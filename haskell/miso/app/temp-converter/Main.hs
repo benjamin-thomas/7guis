@@ -41,18 +41,22 @@ sideEffectTest = setLocalStorage "hello" ("world" :: MisoString)
 
 -- This is not working when I compile with GHC (vs GHCJS, or WASM??)
 #ifdef GHCJS
-foreign import javascript unsafe "Date.now()"
-    getNow2 :: JSM Double
+foreign import javascript unsafe "Date.now"
+    getCurrTime1 :: JSM Int
 #else
-getNow2 :: JSM Double
+getCurrTime1 :: JSM Int
 -- below can **not** work with Miso. At best, I can define an IO Double here, not a JSM Double
 -- getNow2 = round . (*1000) <$> getPOSIXTime
-getNow2 = pure 0
+getCurrTime1 = pure 0
 #endif
 
 -- This works when compiling with GHC (see the jsaddle project)
-getNow3 :: JSM Int
-getNow3 = fromJSValUnchecked =<< (jsg ("Date" :: MisoString) # ("now" :: MisoString) $ ())
+getCurrTime2 :: JSM Int
+#ifdef GHCJS
+getCurrTime2 = fromJSValUnchecked =<< (jsg ("Date" :: MisoString) # ("now" :: MisoString) $ ())
+#else
+getCurrTime2 = pure 0
+#endif
 
 unvalidate :: (Monoid a) => Validation a -> a
 unvalidate (Valid a) = a
@@ -67,9 +71,9 @@ data Model = Model
     { celsius :: Validation MisoString
     , fahrenheit :: Validation MisoString
     , editing :: Field
-    , now1 :: Double
-    , now2 :: Double
-    , now3 :: Int
+    , elapsed :: Double
+    , currTime1 :: Int
+    , currTime2 :: Int
     }
     deriving (Eq, Show)
 
@@ -79,18 +83,18 @@ init' field t =
         { celsius = NotSet
         , fahrenheit = NotSet
         , editing = field
-        , now1 = t
-        , now2 = 0
-        , now3 = 0
+        , elapsed = t
+        , currTime1 = 0
+        , currTime2 = 0
         }
 
 data Msg
     = Focus Field
     | CelsiusChanged MisoString
     | FahrenheitChanged MisoString
-    | GotTime1 Double
-    | GotTime2 Double
-    | GotTime3 Int
+    | GotElapsedTime Double
+    | GotCurrTime1 Int
+    | GotCurrTime2 Int
 
 instance ToMisoString Field where
     toMisoString Celsius = "celsius"
@@ -101,9 +105,9 @@ fmt x = MS.pack $ printf "%0.2f" x
 
 update' :: Msg -> Effect Model Msg
 update' = \case
-    GotTime1 t -> modify $ \m -> m{now1 = t}
-    GotTime2 t -> modify $ \m -> m{now2 = t}
-    GotTime3 t -> modify $ \m -> m{now3 = t}
+    GotElapsedTime t -> modify $ \m -> m{elapsed = t}
+    GotCurrTime1 t -> modify $ \m -> m{currTime1 = t}
+    GotCurrTime2 t -> modify $ \m -> m{currTime2 = t}
     Focus field -> do
         io $ focus (toMisoString field)
         modify $ \m -> m{editing = field}
@@ -123,9 +127,9 @@ update' = \case
         io sideEffectTest
         flip
             batchEff
-            [ GotTime1 <$> now
-            , GotTime2 <$> getNow2
-            , GotTime3 <$> getNow3
+            [ GotElapsedTime <$> now
+            , GotCurrTime1 <$> getCurrTime1
+            , GotCurrTime2 <$> getCurrTime2
             ]
             =<< get
     CelsiusChanged txt ->
