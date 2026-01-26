@@ -1,4 +1,4 @@
-%%raw("import '/src/counter/counter.css'")
+%%raw("import './counter.css'")
 
 @react.component
 let make = () => {

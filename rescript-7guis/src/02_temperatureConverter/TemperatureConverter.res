@@ -1,4 +1,4 @@
-%%raw("import '/src/temperatureConverter/temperatureConverter.css'")
+%%raw("import './temperatureConverter.css'")
 
 @react.component
 let make = () => {
