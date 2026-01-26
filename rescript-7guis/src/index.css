@@ -102,6 +102,24 @@ body {
   gap: var(--spacing-md);
 }
 
+/* Shared input styles */
+.input {
+  font-family: 'Consolas', monospace;
+  font-size: 2rem;
+  color: var(--color-text);
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0 var(--spacing-sm);
+  width: var(--input-width);
+  height: var(--control-height);
+  text-align: right;
+}
+
+.input:focus {
+  outline: 1px solid var(--color-accent);
+}
+
 /* Shared button styles */
 .button {
   font-family: inherit;

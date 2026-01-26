@@ -1,1 +1,15 @@
-/* Component-specific styles */
+.temp-converter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.temp-label {
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+.temp-equals {
+  font-size: 1.5rem;
+  color: var(--color-text-muted);
+}
