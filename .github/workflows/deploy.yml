@@ -49,6 +49,7 @@ jobs:
             if [ -d "elm/$dir" ] && [ -f "elm/$dir/src/Main.elm" ]; then
               echo "Building elm/$dir..."
               cd "elm/$dir"
+              rm -rf elm-stuff
               elm make src/Main.elm --optimize --output=index.html
               cd ../..
             fi
