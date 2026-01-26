@@ -56,6 +56,9 @@ jobs:
           done
 
       # ============ PureScript/Halogen ============
+      - name: Install esbuild
+        run: npm install -g esbuild
+
       - name: Build PureScript Halogen projects
         working-directory: purescript/halogen
         run: |
