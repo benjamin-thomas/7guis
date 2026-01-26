@@ -37,10 +37,10 @@ jobs:
       # ============ Elm ============
       - name: Install Elm
         run: |
-          curl -L -o elm.gz https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz
-          gunzip elm.gz
-          chmod +x elm
-          sudo mv elm /usr/local/bin/
+          curl -L -o elm-binary.gz https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz
+          gunzip elm-binary.gz
+          chmod +x elm-binary
+          sudo mv elm-binary /usr/local/bin/elm
           elm --version
 
       - name: Build Elm projects
