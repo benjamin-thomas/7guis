@@ -1,0 +1,24 @@
+{
+  "name": "rescript-7guis",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "res:build": "rescript",
+    "res:clean": "rescript clean",
+    "res:dev": "rescript watch",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@rescript/react": "^0.14.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "rescript": "^12.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.0"
+  }
+}

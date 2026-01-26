@@ -24,6 +24,6 @@ dist-ssr
 *.sw?
 
 # ReScript
-
-*.bs.js
-lib/
+/lib/
+.bsb.lock
+.merlin

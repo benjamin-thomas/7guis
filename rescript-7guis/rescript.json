@@ -1,0 +1,23 @@
+{
+  "name": "rescript-7guis",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": false
+    }
+  ],
+  "suffix": ".res.mjs",
+  "jsx": {
+    "version": 4
+  },
+  "dependencies": [
+    "@rescript/react"
+  ],
+  "compiler-flags": []
+}

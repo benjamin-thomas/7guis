@@ -1,0 +1,145 @@
+:root {
+  /* Colors */
+  --color-bg: #1a1a1a;
+  --color-card: #2a2a2a;
+  --color-input: #333;
+  --color-border: #444;
+  --color-card-border: #383838;
+  --color-card-border-hover: #f59e0b;
+  --color-card-hover: #303030;
+  --color-button: #444;
+  --color-button-hover: #555;
+  --color-button-active: #4a4a4a;
+  --color-text: #fff;
+  --color-text-muted: #888;
+  --color-accent: #f59e0b;
+
+  /* Spacing */
+  --spacing-sm: 1rem;
+  --spacing-md: 2.5rem;
+  --spacing-lg: 3rem;
+  --spacing-xl: 5rem;
+
+  /* Sizing */
+  --control-height: 4rem;
+  --input-width: 150px;
+  --radius: 4px;
+  --radius-lg: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Shared task title style */
+.task-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+}
+
+/* Index page styles */
+.index-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.index-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+}
+
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+}
+
+.card {
+  background: var(--color-card);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 220px;
+  transition: background 0.15s ease, transform 0.15s ease;
+  border: 1px solid var(--color-card-border);
+}
+
+.card:hover {
+  background: var(--color-card-hover);
+}
+
+.card--interactive:hover {
+  border-color: var(--color-card-border-hover);
+}
+
+/* Shared task container */
+.task-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* Shared button styles */
+.button {
+  font-family: inherit;
+  font-size: 2rem;
+  color: var(--color-text);
+  background: var(--color-button);
+  border: none;
+  padding: 0 var(--spacing-md);
+  height: var(--control-height);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-button-hover);
+}
+
+.button:active {
+  background: var(--color-button-active);
+}
+
+/* Placeholder text */
+.coming-soon {
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  font-style: italic;
+}
+
+/* Back link */
+.back-link {
+  position: fixed;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 1.5rem;
+}
+
+.back-link:hover {
+  color: var(--color-accent);
+}
