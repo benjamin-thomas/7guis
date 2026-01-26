@@ -45,7 +45,7 @@ jobs:
 
       - name: Build Elm projects
         run: |
-          for dir in counter temp_converter flight_booker timer crud circle_drawer cells counter2; do
+          for dir in counter temp_converter flight_booker timer circle_drawer cells counter2; do
             if [ -d "elm/$dir" ] && [ -f "elm/$dir/src/Main.elm" ]; then
               echo "Building elm/$dir..."
               cd "elm/$dir"
@@ -81,8 +81,8 @@ jobs:
           # ReScript
           cp -r rescript-7guis/dist/* docs/rescript/
           
-          # Elm
-          for dir in counter temp_converter flight_booker timer crud circle_drawer cells counter2; do
+          # Elm (crud excluded - requires backend server)
+          for dir in counter temp_converter flight_booker timer circle_drawer cells counter2; do
             if [ -f "elm/$dir/index.html" ]; then
               mkdir -p "docs/elm/$dir"
               cp "elm/$dir/index.html" "docs/elm/$dir/"

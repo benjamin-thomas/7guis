@@ -118,8 +118,7 @@ view model =
             unvalidate model.fahrenheit
     in
     div [ style "margin-left" "20px", style "zoom" "1.3" ]
-        [ pre [] [ text <| Debug.toString model ]
-        , h1 [] [ text "Temp converter (Elm)" ]
+        [ h1 [] [ text "Temp converter (Elm)" ]
         , div [ style "display" "flex", style "gap" "30px" ]
             [ temperature "Celsius" CelsiusChanged unvalidCelsius
             , temperature "Fahrenheit" FahrenheitChanged unvalidFahrenheit

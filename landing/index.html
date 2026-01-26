@@ -72,6 +72,14 @@
       background: #555;
       color: var(--color-accent);
     }
+    .excluded {
+      background: #333;
+      color: var(--color-muted);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
     .note {
       color: var(--color-muted);
       font-size: 0.9rem;
@@ -101,7 +109,7 @@
         <li><a href="elm/temp_converter/">Temp Converter</a></li>
         <li><a href="elm/flight_booker/">Flight Booker</a></li>
         <li><a href="elm/timer/">Timer</a></li>
-        <li><a href="elm/crud/">CRUD</a></li>
+        <li><span class="excluded" title="Requires backend server">CRUD (excluded)</span></li>
         <li><a href="elm/circle_drawer/">Circle Drawer</a></li>
         <li><a href="elm/cells/">Cells</a></li>
       </ul>
