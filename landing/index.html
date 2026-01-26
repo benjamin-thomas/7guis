@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7GUIs Implementations</title>
+  <style>
+    :root {
+      --color-bg: #1a1a1a;
+      --color-card: #2a2a2a;
+      --color-text: #fff;
+      --color-accent: #f59e0b;
+      --color-muted: #888;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      padding: 3rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      color: var(--color-accent);
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+    h2 {
+      font-size: 1.5rem;
+      color: var(--color-accent);
+      margin-bottom: 1rem;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--color-muted);
+      margin-bottom: 2rem;
+    }
+    .subtitle a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+    .subtitle a:hover {
+      text-decoration: underline;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .impl {
+      background: var(--color-card);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    li a {
+      display: block;
+      color: var(--color-text);
+      text-decoration: none;
+      background: #444;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    li a:hover {
+      background: #555;
+      color: var(--color-accent);
+    }
+    .note {
+      color: var(--color-muted);
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>7GUIs</h1>
+    <p class="subtitle">
+      Implementing the <a href="https://eugenkiss.github.io/7guis/tasks">7 GUI tasks</a> in multiple languages
+    </p>
+    
+    <div class="impl">
+      <h2>ReScript</h2>
+      <ul>
+        <li><a href="rescript/">All 7 Tasks</a></li>
+      </ul>
+      <p class="note">Single app with all tasks</p>
+    </div>
+    
+    <div class="impl">
+      <h2>Elm</h2>
+      <ul>
+        <li><a href="elm/counter/">Counter</a></li>
+        <li><a href="elm/temp_converter/">Temp Converter</a></li>
+        <li><a href="elm/flight_booker/">Flight Booker</a></li>
+        <li><a href="elm/timer/">Timer</a></li>
+        <li><a href="elm/crud/">CRUD</a></li>
+        <li><a href="elm/circle_drawer/">Circle Drawer</a></li>
+        <li><a href="elm/cells/">Cells</a></li>
+      </ul>
+    </div>
+    
+    <div class="impl">
+      <h2>PureScript (Halogen)</h2>
+      <ul>
+        <li><a href="purescript/halogen/">All Tasks</a></li>
+      </ul>
+      <p class="note">Has its own index page</p>
+    </div>
+  </div>
+</body>
+</html>

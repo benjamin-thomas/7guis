@@ -1,0 +1,119 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ============ ReScript ============
+      - name: Build ReScript
+        working-directory: rescript-7guis
+        run: |
+          npm ci
+          npm run res:build
+          npx vite build --base=/7guis/rescript/
+
+      # ============ Elm ============
+      - name: Install Elm
+        run: |
+          curl -L -o elm.gz https://github.com/elm/compiler/releases/download/0.19.1/binary-for-linux-64-bit.gz
+          gunzip elm.gz
+          chmod +x elm
+          sudo mv elm /usr/local/bin/
+          elm --version
+
+      - name: Build Elm projects
+        run: |
+          for dir in counter temp_converter flight_booker timer crud circle_drawer cells counter2; do
+            if [ -d "elm/$dir" ] && [ -f "elm/$dir/src/Main.elm" ]; then
+              echo "Building elm/$dir..."
+              cd "elm/$dir"
+              elm make src/Main.elm --optimize --output=index.html
+              cd ../..
+            fi
+          done
+
+      # ============ PureScript/Halogen ============
+      - name: Build PureScript Halogen projects
+        working-directory: purescript/halogen
+        run: |
+          for dir in counter temp_converter flight_booker timer crud circle_drawer; do
+            if [ -d "$dir" ]; then
+              echo "Building purescript/halogen/$dir..."
+              cd "$dir"
+              npm ci
+              npm run build-prod
+              cd ..
+            fi
+          done
+
+      # ============ Assemble docs/ ============
+      - name: Assemble docs folder
+        run: |
+          mkdir -p docs/rescript
+          mkdir -p docs/elm
+          mkdir -p docs/purescript/halogen
+          
+          # Landing page
+          cp landing/index.html docs/
+          
+          # ReScript
+          cp -r rescript-7guis/dist/* docs/rescript/
+          
+          # Elm
+          for dir in counter temp_converter flight_booker timer crud circle_drawer cells counter2; do
+            if [ -f "elm/$dir/index.html" ]; then
+              mkdir -p "docs/elm/$dir"
+              cp "elm/$dir/index.html" "docs/elm/$dir/"
+            fi
+          done
+          
+          # PureScript/Halogen
+          cp purescript/halogen/index.html docs/purescript/halogen/
+          for dir in counter temp_converter flight_booker timer crud circle_drawer; do
+            if [ -d "purescript/halogen/$dir/prod" ]; then
+              mkdir -p "docs/purescript/halogen/$dir"
+              cp -r "purescript/halogen/$dir/prod" "docs/purescript/halogen/$dir/"
+            fi
+          done
+
+      # ============ Upload artifact ============
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
