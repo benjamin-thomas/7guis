@@ -12,6 +12,15 @@ In another tab, run the Vite dev server:
 npm run dev
 ```
 
+Run tests (in a separate tab):
+
+```sh
+npm test
+
+# or
+npm run test:watch
+```
+
 ## Tips
 
 ### Fast Refresh & ReScript

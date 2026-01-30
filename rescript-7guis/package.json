@@ -6,10 +6,12 @@
   "scripts": {
     "res:build": "rescript",
     "res:clean": "rescript clean",
-    "res:dev": "rescript watch",
+    "res:dev": "rescript watch --after-build clear",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest --clearScreen"
   },
   "dependencies": {
     "@rescript/react": "^0.14.0",
@@ -19,6 +21,12 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.2",
-    "vite": "^7.1.0"
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/coverage-v8": "^2.1.0",
+    "happy-dom": "^14.12.3",
+    "rescript-vitest": "^2.1.1",
+    "vite": "^7.1.0",
+    "vitest": "^2.1.0"
   }
 }
