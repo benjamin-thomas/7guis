@@ -8,12 +8,15 @@ type route =
   | CircleDrawer
   | Cells
 
-@val @scope("window.location") external hash: string = "hash"
-@val @scope("window") external addEventListener: (string, unit => unit) => unit = "addEventListener"
-@val @scope("window")
-external removeEventListener: (string, unit => unit) => unit = "removeEventListener"
+module Window = {
+  @val external addEventListener: (string, unit => unit) => unit = "addEventListener"
+  @val external removeEventListener: (string, unit => unit) => unit = "removeEventListener"
+  module Location = {
+    @val external hash: string = "window.location.hash"
+  }
+}
 
-let getRouteFromHash = () => {
+let hashToRoute = hash => {
   switch hash {
   | "#counter" => Counter
   | "#temperature-converter" => TemperatureConverter
@@ -26,14 +29,21 @@ let getRouteFromHash = () => {
   }
 }
 
+let withBackLink = component => {
+  <div>
+    <a href="#" className="back-link"> {React.string("< Back to index")} </a>
+    {component}
+  </div>
+}
+
 @react.component
 let make = () => {
-  let (route, setRoute) = React.useState(getRouteFromHash)
+  let (route, setRoute) = React.useState(() => hashToRoute(Window.Location.hash))
 
   React.useEffect0(() => {
-    let handleHashChange = () => setRoute(_ => getRouteFromHash())
-    addEventListener("hashchange", handleHashChange)
-    Some(() => removeEventListener("hashchange", handleHashChange))
+    let onHashChange = () => setRoute(_ => hashToRoute(Window.Location.hash))
+    Window.addEventListener("hashchange", onHashChange)
+    Some(() => Window.removeEventListener("hashchange", onHashChange))
   })
 
   switch route {
@@ -45,47 +55,23 @@ let make = () => {
         <a href="#temperature-converter" className="card card--interactive">
           {React.string("Temperature Converter")}
         </a>
-        <a href="#flight-booker" className="card card--interactive"> {React.string("Flight Booker")} </a>
+        <a href="#flight-booker" className="card card--interactive">
+          {React.string("Flight Booker")}
+        </a>
         <a href="#timer" className="card card--interactive"> {React.string("Timer")} </a>
         <a href="#crud" className="card card--interactive"> {React.string("CRUD")} </a>
-        <a href="#circle-drawer" className="card card--interactive"> {React.string("Circle Drawer")} </a>
+        <a href="#circle-drawer" className="card card--interactive">
+          {React.string("Circle Drawer")}
+        </a>
         <a href="#cells" className="card card--interactive"> {React.string("Cells")} </a>
       </div>
     </div>
-  | Counter =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <Counter />
-    </div>
-  | TemperatureConverter =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <TemperatureConverter />
-    </div>
-  | FlightBooker =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <FlightBooker />
-    </div>
-  | Timer =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <Timer />
-    </div>
-  | Crud =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <Crud />
-    </div>
-  | CircleDrawer =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <CircleDrawer />
-    </div>
-  | Cells =>
-    <div>
-      <a href="#" className="back-link"> {React.string("< Back to index")} </a>
-      <Cells />
-    </div>
+  | Counter => withBackLink(<Counter />)
+  | TemperatureConverter => withBackLink(<TemperatureConverter />)
+  | FlightBooker => withBackLink(<FlightBooker />)
+  | Timer => withBackLink(<Timer />)
+  | Crud => withBackLink(<Crud />)
+  | CircleDrawer => withBackLink(<CircleDrawer />)
+  | Cells => withBackLink(<Cells />)
   }
 }
