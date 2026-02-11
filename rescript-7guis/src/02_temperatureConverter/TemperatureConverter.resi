@@ -1,4 +1,6 @@
 @react.component
 let make: unit => React.element
 
-let valid: string => bool
+type validation = Blank | Valid(float) | Invalid
+
+let parse: string => validation

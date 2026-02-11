@@ -36,15 +36,30 @@ module Input = {
 
 let isBlank = str => str->String.trim->String.isEmpty
 
-let valid = str => {
-  let allValidChars = str => {
-    let invalidRe = /[^0-9.]/->RegExp.test(str)
-    let tooManyDecimals = str->String.split(".")->Array.length > 2
+type validation = Blank | Valid(float) | Invalid
 
-    !invalidRe && !tooManyDecimals
+let parse = str => {
+  if isBlank(str) {
+    Blank
+  } else {
+    switch Float.fromString(str) {
+    | None => Invalid
+    | Some(n) => {
+        let allValidChars = str => {
+          let invalidRe = /[^0-9.]/->RegExp.test(str) // reject 1.2x
+          let tooManyDecimals = str->String.split(".")->Array.length > 2 // reject 1.2.3
+
+          !invalidRe && !tooManyDecimals
+        }
+
+        if allValidChars(str) {
+          Valid(n)
+        } else {
+          Invalid
+        }
+      }
+    }
   }
-
-  isBlank(str) || allValidChars(str)
 }
 
 let fahrenheitFromCelsius = celsius => {
@@ -70,17 +85,15 @@ let make = () => {
     | Celsius(newCelsiusStr) =>
       setCelsius(_ => newCelsiusStr)
 
-      switch valid(newCelsiusStr) {
-      | false => setError(_ => Some("Invalid Celsius"))
-      | _ => {
+      switch parse(newCelsiusStr) {
+      | Invalid => setError(_ => Some("Invalid Celsius"))
+      | Blank => {
           setError(_ => None)
-
-          let newFahrenheit =
-            newCelsiusStr
-            ->Float.fromString
-            ->Option.map(n => fahrenheitFromCelsius(n)->Float.toFixed(~digits=2))
-            ->Option.getOr("")
-
+          setFahrenheit(_ => "")
+        }
+      | Valid(newCelsius) => {
+          setError(_ => None)
+          let newFahrenheit = newCelsius->fahrenheitFromCelsius->Float.toFixed(~digits=2)
           setFahrenheit(_ => newFahrenheit)
         }
       }
@@ -88,16 +101,15 @@ let make = () => {
     | Fahrenheit(newFahrenheitStr) =>
       setFahrenheit(_ => newFahrenheitStr)
 
-      switch valid(newFahrenheitStr) {
-      | false => setError(_ => Some("Invalid Fahrenheit"))
-      | _ => {
+      switch parse(newFahrenheitStr) {
+      | Invalid => setError(_ => Some("Invalid Fahrenheit"))
+      | Blank => {
           setError(_ => None)
-
-          let newCelsius =
-            newFahrenheitStr
-            ->Float.fromString
-            ->Option.map(n => celsiusFromFahrenheit(n)->Float.toFixed(~digits=2))
-            ->Option.getOr("") // impossible state! Handle this via `valid`?
+          setCelsius(_ => "")
+        }
+      | Valid(newFahrenheit) => {
+          setError(_ => None)
+          let newCelsius = newFahrenheit->celsiusFromFahrenheit->Float.toFixed(~digits=2)
           setCelsius(_ => newCelsius)
         }
       }

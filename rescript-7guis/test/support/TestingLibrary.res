@@ -14,3 +14,5 @@ type screen = {
 
 @module("@testing-library/react") @val
 external screen: screen = "screen"
+
+@get external value: element => string = "value"
