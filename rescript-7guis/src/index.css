@@ -205,3 +205,25 @@ body {
 .back-link:hover {
   color: var(--color-accent);
 }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .index-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-width: auto;
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .task-title {
+    font-size: 2rem;
+  }
+
+  .back-link {
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    font-size: 1.2rem;
+  }
+}
