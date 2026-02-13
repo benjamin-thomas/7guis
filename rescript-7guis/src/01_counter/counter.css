@@ -24,4 +24,7 @@
     width: 100%;
   }
 
+  .counter-controls .input {
+    text-align: center;
+  }
 }
