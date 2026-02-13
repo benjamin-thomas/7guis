@@ -13,3 +13,18 @@
   font-size: 1.5rem;
   color: var(--color-text-muted);
 }
+
+@media (max-width: 768px) {
+  .temp-converter {
+    flex-direction: column;
+  }
+
+  .temp-converter .input {
+    width: 100%;
+    text-align: center;
+  }
+
+  .temp-equals {
+    display: none;
+  }
+}
