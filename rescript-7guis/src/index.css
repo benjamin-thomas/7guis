@@ -120,6 +120,14 @@ body {
   outline: 1px solid var(--color-accent);
 }
 
+.input--invalid {
+  border-color: #ef4444;
+}
+
+.input--invalid:focus {
+  outline-color: #ef4444;
+}
+
 /* Shared button styles */
 .button {
   font-family: inherit;
@@ -139,6 +147,42 @@ body {
 
 .button:active {
   background: var(--color-button-active);
+}
+
+.button:focus {
+  outline: 1px solid var(--color-accent);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Shared error section */
+.error-section {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-left: 4px solid #ef4444;
+  color: #f87171;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 1.1rem;
+  animation: errorFadeIn 0.2s ease-in;
+}
+
+.error-section--hidden {
+  visibility: hidden;
+}
+
+@keyframes errorFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Placeholder text */
