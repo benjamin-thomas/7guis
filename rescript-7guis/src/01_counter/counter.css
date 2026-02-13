@@ -12,3 +12,16 @@
 .counter-display:focus {
   outline: none;
 }
+
+@media (max-width: 768px) {
+  .counter-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .counter-controls .input,
+  .counter-controls .button {
+    width: 100%;
+  }
+
+}

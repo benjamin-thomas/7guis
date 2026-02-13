@@ -208,6 +208,10 @@ body {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
+  body {
+    padding: var(--spacing-sm);
+  }
+
   .index-grid {
     grid-template-columns: 1fr;
   }
