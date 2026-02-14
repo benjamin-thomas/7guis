@@ -1,14 +1,14 @@
 %%raw("import './timer.css'")
 
 module State = {
-  type loadedTime = {startedAt: float, now: float}
+  type time = {startedAt: float, now: float}
 
-  type timeState =
+  type timeStatus =
     | Loading
-    | Loaded(loadedTime)
+    | Loaded(time)
 
   type t = {
-    time: timeState,
+    time: timeStatus,
     durationMs: int,
   }
 
@@ -21,7 +21,7 @@ module State = {
 
 type action =
   | Initialized({now: float})
-  | Tick({now: float})
+  | Ticked({now: float})
   | DurationChanged(int)
   | ResetBtnClicked
 
@@ -31,10 +31,10 @@ let reducerLoading = (state: State.t, action: action) =>
   | _ => state
   }
 
-let reducerLoaded = (state: State.t, time: State.loadedTime, action: action) =>
+let reducerLoaded = (state: State.t, time: State.time, action: action) =>
   switch action {
   | Initialized(_) => state
-  | Tick({now}) => {...state, time: Loaded({...time, now})}
+  | Ticked({now}) => {...state, time: Loaded({...time, now})}
   | DurationChanged(ms) => {...state, durationMs: ms}
   | ResetBtnClicked => {...state, time: Loaded({...time, startedAt: time.now})}
   }
@@ -89,17 +89,17 @@ let make = () => {
     dispatch(Initialized({now: now}))
 
     let tickId = setInterval(() => {
-      dispatch(Tick({now: Date.now()}))
+      dispatch(Ticked({now: Date.now()}))
     }, 100)
     Some(() => clearInterval(tickId))
   })
 
-  let timerContent = switch state.time {
-  | Loading =>
+  let loadingElem =
     <div className="card timer">
       <span> {React.string("Loading...")} </span>
     </div>
-  | Loaded(time) =>
+
+  let loadedElem = (time: State.time) => {
     let elapsedMs = State.Derived.elapsedMs(~startedAt=time.startedAt, ~now=time.now)
     let durationMs = state.durationMs->Int.toFloat
     let cappedElapsedMs = Math.min(elapsedMs, durationMs)
@@ -141,7 +141,10 @@ let make = () => {
     <Debug state />
     <div className="task-container">
       <h1 className="task-title"> {React.string("Timer")} </h1>
-      {timerContent}
+      {switch state.time {
+      | Loading => loadingElem
+      | Loaded(time) => loadedElem(time)
+      }}
     </div>
   </>
 }
