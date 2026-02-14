@@ -4,15 +4,15 @@ module State = {
   type time = {startedAt: float, now: float}
 
   type timeStatus =
-    | Loading
-    | Loaded(time)
+    | Initializing
+    | Ready(time)
 
   type t = {
     time: timeStatus,
     durationMs: int,
   }
 
-  let init: t = {time: Loading, durationMs: 15000}
+  let init: t = {time: Initializing, durationMs: 15000}
 
   module Derived = {
     let elapsedMs = (~startedAt: float, ~now: float) => now -. startedAt
@@ -20,30 +20,25 @@ module State = {
 }
 
 type action =
-  | Initialized({now: float})
-  | Ticked({now: float})
+  | Ticked(float)
   | DurationChanged(int)
   | ResetBtnClicked
 
-let reducerLoading = (state: State.t, action: action) =>
+let reducer = (state: State.t, action: action) => {
   switch action {
-  | Initialized({now}) => {...state, time: Loaded({startedAt: now, now})}
-  | _ => state
-  }
-
-let reducerLoaded = (state: State.t, time: State.time, action: action) =>
-  switch action {
-  | Initialized(_) => state
-  | Ticked({now}) => {...state, time: Loaded({...time, now})}
+  | Ticked(now) =>
+    switch state.time {
+    | Initializing => {...state, time: Ready({startedAt: now, now})}
+    | Ready(time) => {...state, time: Ready({...time, now})}
+    }
   | DurationChanged(ms) => {...state, durationMs: ms}
-  | ResetBtnClicked => {...state, time: Loaded({...time, startedAt: time.now})}
+  | ResetBtnClicked =>
+    switch state.time {
+    | Ready(time) => {...state, time: Ready({...time, startedAt: time.now})}
+    | Initializing => panic("This should never happen!")
+    }
   }
-
-let reducer = (state: State.t, action: action) =>
-  switch state.time {
-  | Loading => reducerLoading(state, action)
-  | Loaded(time) => reducerLoaded(state, time, action)
-  }
+}
 
 module Debug = {
   // VITE_DEBUG=1 npm run dev
@@ -56,8 +51,8 @@ module Debug = {
       : <pre style={{fontSize: "20px", lineHeight: "1.5"}}>
           {React.string({
             let (startedAtStr, nowStr, elapsedMsStr) = switch state.time {
-            | Loading => ("Loading...", "Loading...", "Waiting...")
-            | Loaded({startedAt, now}) => (
+            | Initializing => ("Loading...", "Loading...", "Initializing...")
+            | Ready({startedAt, now}) => (
                 Float.toString(startedAt),
                 Float.toString(now),
                 State.Derived.elapsedMs(~startedAt, ~now)->Float.toFixed(~digits=1),
@@ -85,11 +80,9 @@ let make = () => {
   let (state, dispatch) = React.useReducer(reducer, State.init)
 
   React.useEffect0(() => {
-    let now = Date.now()
-    dispatch(Initialized({now: now}))
-
+    dispatch(Ticked(Date.now()))
     let tickId = setInterval(() => {
-      dispatch(Ticked({now: Date.now()}))
+      dispatch(Ticked(Date.now()))
     }, 100)
     Some(() => clearInterval(tickId))
   })
@@ -142,8 +135,8 @@ let make = () => {
     <div className="task-container">
       <h1 className="task-title"> {React.string("Timer")} </h1>
       {switch state.time {
-      | Loading => loadingElem
-      | Loaded(time) => loadedElem(time)
+      | Initializing => loadingElem
+      | Ready(time) => loadedElem(time)
       }}
     </div>
   </>
