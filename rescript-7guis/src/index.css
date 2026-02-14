@@ -209,7 +209,15 @@ body {
 /* Mobile responsive */
 @media (max-width: 768px) {
   body {
+    display: block;
     padding: var(--spacing-sm);
+  }
+
+  .task-container {
+    min-height: calc(100vh - 2 * var(--spacing-sm));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .index-grid {
@@ -217,12 +225,14 @@ body {
   }
 
   .card {
+    width: 100%;
     min-width: auto;
     padding: var(--spacing-md) var(--spacing-lg);
   }
 
   .task-title {
     font-size: 2rem;
+    text-align: center;
   }
 
   .back-link {

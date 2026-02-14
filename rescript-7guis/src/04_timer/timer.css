@@ -1,1 +1,96 @@
-/* Component-specific styles */
+.timer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.timer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.timer-label {
+  color: var(--color-text-muted);
+}
+
+.timer-progress {
+  background: var(--color-border);
+  border-radius: var(--radius);
+
+  /* For FireFox */
+  border: none;
+}
+
+.timer-progress::-webkit-progress-bar {
+  background: var(--color-border);
+  border-radius: var(--radius);
+}
+
+.timer-progress::-webkit-progress-value {
+  background: var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.timer-progress::-moz-progress-bar {
+  background: var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.timer-elapsed {
+  font-family: 'Consolas', monospace;
+  font-size: 2rem;
+}
+
+.timer-slider {
+  flex: 1;
+  height: 1.5rem;
+  cursor: pointer;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: var(--radius);
+}
+
+.timer-slider::-webkit-slider-thumb {
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--color-accent);
+  border-radius: 50%;
+
+  appearance: none;
+}
+
+.timer-slider::-moz-range-thumb {
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--color-accent);
+  border-radius: 50%;
+
+  border: none;
+}
+
+@media (max-width: 768px) {
+  .timer-row {
+    flex-direction: column;
+  }
+
+  .timer-label {
+    font-size: 1.25rem;
+  }
+
+  .timer-progress,
+  .timer-slider {
+    width: 100%;
+
+    /* For FireFox */
+    flex: none;
+  }
+
+  .timer-elapsed {
+    font-size: 1.75rem;
+  }
+
+  .timer .button {
+    font-size: 1.5rem;
+  }
+}

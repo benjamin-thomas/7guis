@@ -30,10 +30,10 @@ let hashToRoute = hash => {
 }
 
 let withBackLink = component => {
-  <div>
+  <>
     <a href="#" className="back-link"> {React.string("< Back to index")} </a>
     {component}
-  </div>
+  </>
 }
 
 @react.component
