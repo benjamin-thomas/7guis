@@ -73,12 +73,22 @@
 }
 
 .crud-listbox-item--selected {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.crud-listbox-item--selected:hover {
+  background: var(--color-border);
+}
+
+.crud-listbox:focus-within .crud-listbox-item--selected {
   background: var(--color-accent);
   color: var(--color-bg);
 }
 
-.crud-listbox-item--selected:hover {
+.crud-listbox:focus-within .crud-listbox-item--selected:hover {
   background: var(--color-accent);
+  color: var(--color-bg);
 }
 
 /* ── Buttons ── */
