@@ -15,9 +15,6 @@ module Circle = {
   }
 }
 
-let circleEncoder = (c: Circle.t) =>
-  E.object(Dict.fromArray([("cx", E.int(c.cx)), ("cy", E.int(c.cy))]))
-
 module History: {
   type t<'a> = {prev: list<'a>, curr: 'a, next: list<'a>}
   let init: 'a => t<'a>
@@ -81,8 +78,24 @@ let reducer = (state, action) => {
         circles: History.insert(state.circles, newCircles),
       }
     }
-  | ShowMenu(m) => {...state, menu: Some(m)}
-  | HideMenu => {...state, menu: None}
+  | ShowMenu(menu) => {
+      ...state,
+      menu: Some(menu),
+      circles: History.insert(state.circles, state.circles.curr),
+    }
+  | HideMenu =>
+    switch state.menu {
+    | None => {...state, menu: None}
+    | Some(_) => {
+        ...state,
+        menu: None,
+        circles: if List.head(state.circles.prev) == Some(state.circles.curr) {
+          History.undo(state.circles)
+        } else {
+          state.circles
+        },
+      }
+    }
   | UndoClicked => {
       ...state,
       circles: History.undo(state.circles),
@@ -94,9 +107,9 @@ let reducer = (state, action) => {
   | RadiusChanged(r) =>
     switch state.menu {
     | None => state
-    | Some({idx}) => {
+    | Some(menu) => {
         let curr = state.circles.curr->List.mapWithIndex((circle, idx') =>
-          if idx == idx' {
+          if menu.idx == idx' {
             {...circle, r}
           } else {
             circle
@@ -109,6 +122,60 @@ let reducer = (state, action) => {
   }
 }
 
+module Debug = {
+  // VITE_DEBUG=1 npm run dev
+  let isEnabled: bool = %raw("import.meta.env.VITE_DEBUG === '1'")
+
+  let circleEncoder = (c: Circle.t) =>
+    E.object(Dict.fromArray([("cx", E.int(c.cx)), ("cy", E.int(c.cy)), ("r", E.int(c.r))]))
+
+  @react.component
+  let make = (~state) => {
+    !isEnabled
+      ? React.null
+      : <pre
+          style={position: "absolute", top: "20px", right: "30px", minWidth: "220px", zIndex: "-1"}
+        >
+          {
+            let data = {
+              let circlesCurrEncoded: JSON.t =
+                state.circles.curr->List.toArray->Array.map(circleEncoder)->E.array
+
+              // let edgeEncoder = (circles): JSON.t =>
+              //   circles
+              //   ->List.toArray
+              //   ->Array.map((lst: list<Circle.t>) => lst->List.toArray->Array.map(circleEncoder))
+              //   ->Array.map(_, E.array)
+              //   ->E.array
+
+              E.object(
+                Dict.fromArray([
+                  ("x", E.int(state.x)),
+                  ("y", E.int(state.y)),
+                  ("radius", E.int(state.radius)),
+                  (
+                    "menu",
+                    state.menu
+                    ->Option.map(({idx, x, y}) =>
+                      E.object(
+                        Dict.fromArray([("idx", E.int(idx)), ("x", E.int(x)), ("y", E.int(y))]),
+                      )
+                    )
+                    ->Option.getOr(E.null),
+                  ),
+                  // ("circlesPrev", edgeEncoder(state.circles.prev)),
+                  ("circlesCurr", circlesCurrEncoded),
+                  // ("circlesNext", edgeEncoder(state.circles.next)),
+                ]),
+              )
+            }
+
+            React.string(JSON.stringify(data, ~space=2))
+          }
+        </pre>
+  }
+}
+
 @react.component
 let make = () => {
   let (state, dispatch) = React.useReducer(reducer, init)
@@ -116,42 +183,8 @@ let make = () => {
   <div className="task-container">
     <h1 className="task-title"> {React.string("Circle Drawer")} </h1>
 
-    <pre style={position: "absolute", top: "20px", right: "30px", minWidth: "220px", zIndex: "-1"}>
-      {
-        let data = {
-          let circlesCurrEncoded: JSON.t =
-            state.circles.curr->List.toArray->Array.map(circleEncoder)->E.array
+    <Debug state />
 
-          // let edgeEncoder = (circles): JSON.t =>
-          //   circles
-          //   ->List.toArray
-          //   ->Array.map((lst: list<Circle.t>) => lst->List.toArray->Array.map(circleEncoder))
-          //   ->Array.map(_, E.array)
-          //   ->E.array
-
-          E.object(
-            Dict.fromArray([
-              ("x", E.int(state.x)),
-              ("y", E.int(state.y)),
-              ("radius", E.int(state.radius)),
-              (
-                "menu",
-                state.menu
-                ->Option.map(({idx, x, y}) =>
-                  E.object(Dict.fromArray([("idx", E.int(idx)), ("x", E.int(x)), ("y", E.int(y))]))
-                )
-                ->Option.getOr(E.null),
-              ),
-              // ("circlesPrev", edgeEncoder(state.circles.prev)),
-              ("circlesCurr", circlesCurrEncoded),
-              // ("circlesNext", edgeEncoder(state.circles.next)),
-            ]),
-          )
-        }
-
-        React.string(JSON.stringify(data, ~space=2))
-      }
-    </pre>
     <div className="card circle-drawer">
       <div className="circle-drawer-toolbar">
         <button className="button" onClick={_ => dispatch(UndoClicked)}>
@@ -236,7 +269,7 @@ let make = () => {
                   (evt->JsxEvent.Form.target)["value"]
                   ->Int.fromString
                   ->Option.getOrThrow
-                dispatch(RadiusChanged(r)) // FIXME: should I send the idx with it too?
+                dispatch(RadiusChanged(r))
               }}
             />
           </div>
