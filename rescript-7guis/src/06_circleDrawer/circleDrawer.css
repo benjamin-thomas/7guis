@@ -1,1 +1,107 @@
-/* Component-specific styles */
+.circle-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 600px;
+}
+
+.circle-drawer-toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.circle-drawer-svg-container {
+  height: 400px;
+  background-color: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.circle-drawer-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.circle-drawer-popup {
+  transform: translate(-50%, 60%);
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  padding: 1rem;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 200px;
+  position: relative;
+}
+
+.circle-drawer-popup-label {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.circle-drawer-popup-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: var(--radius);
+  opacity: 0.6;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.circle-drawer-popup-close:hover {
+  opacity: 1;
+  background-color: var(--color-border);
+}
+
+.circle-drawer-slider {
+  cursor: pointer;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  appearance: none;
+}
+
+.circle-drawer-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--color-accent);
+  border-radius: 50%;
+}
+
+.circle-drawer-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+@media (max-width: 600px) {
+  .circle-drawer-svg-container {
+    height: 300px;
+  }
+
+  .circle-drawer-toolbar {
+    gap: 0.5rem;
+  }
+
+  .circle-drawer-toolbar .button {
+    font-size: 1.2rem;
+    padding: 0.5rem 1rem;
+    height: auto;
+    min-width: 80px;
+    flex: 1;
+  }
+}
