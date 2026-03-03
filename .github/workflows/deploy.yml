@@ -46,21 +46,45 @@ jobs:
 
       - name: Build Elm projects
         run: |
-          for dir in counter temp_converter flight_booker timer circle_drawer cells counter2; do
+          # Projects using shared dark theme (template + elm.js)
+          for dir in counter temp_converter flight_booker timer circle_drawer cells; do
             if [ -d "elm/$dir" ] && [ -f "elm/$dir/src/Main.elm" ]; then
               echo "Building elm/$dir..."
               cd "elm/$dir"
               rm -rf elm-stuff
-              elm make src/Main.elm --optimize --output=index.html
+              elm make src/Main.elm --optimize --output=elm.js
+              cp ../template.html index.html
               cd ../..
             fi
           done
+          # counter2 uses Vite — build with standalone HTML
+          if [ -d "elm/counter2" ] && [ -f "elm/counter2/src/Main.elm" ]; then
+            echo "Building elm/counter2..."
+            cd elm/counter2
+            rm -rf elm-stuff
+            elm make src/Main.elm --optimize --output=index.html
+            cd ../..
+          fi
 
       # ============ PureScript/Halogen ============
       - name: Install esbuild
         run: npm install -g esbuild
 
+      - name: Cache PureScript builds
+        id: ps-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            purescript/halogen/counter/prod
+            purescript/halogen/temp_converter/prod
+            purescript/halogen/flight_booker/prod
+            purescript/halogen/timer/prod
+            purescript/halogen/crud/prod
+            purescript/halogen/circle_drawer/prod
+          key: ps-${{ hashFiles('purescript/**', 'shared/7guis-theme.css') }}
+
       - name: Build PureScript Halogen projects
+        if: steps.ps-cache.outputs.cache-hit != 'true'
         working-directory: purescript/halogen
         run: |
           for dir in counter temp_converter flight_booker timer crud circle_drawer; do
@@ -79,23 +103,31 @@ jobs:
           mkdir -p docs/rescript
           mkdir -p docs/elm
           mkdir -p docs/purescript/halogen
-          
+
           # Landing page
           cp landing/index.html docs/
-          
+
           # ReScript
           cp -r rescript-7guis/dist/* docs/rescript/
-          
-          # Elm (crud excluded - requires backend server)
-          for dir in counter temp_converter flight_booker timer circle_drawer cells counter2; do
+
+          # Elm — themed projects (crud excluded - requires backend server)
+          for dir in counter temp_converter flight_booker timer circle_drawer cells; do
             if [ -f "elm/$dir/index.html" ]; then
               mkdir -p "docs/elm/$dir"
               cp "elm/$dir/index.html" "docs/elm/$dir/"
+              cp "elm/$dir/elm.js" "docs/elm/$dir/"
+              cp shared/7guis-theme.css "docs/elm/$dir/"
             fi
           done
-          
+          # Elm — counter2 (standalone HTML, no theme)
+          if [ -f "elm/counter2/index.html" ]; then
+            mkdir -p "docs/elm/counter2"
+            cp "elm/counter2/index.html" "docs/elm/counter2/"
+          fi
+
           # PureScript/Halogen
           cp purescript/halogen/index.html docs/purescript/halogen/
+          cp shared/7guis-theme.css docs/purescript/halogen/
           for dir in counter temp_converter flight_booker timer crud circle_drawer; do
             if [ -d "purescript/halogen/$dir/prod" ]; then
               mkdir -p "docs/purescript/halogen/$dir"

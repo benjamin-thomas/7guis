@@ -131,7 +131,7 @@ update msg model =
                                     { cx = curr.mousePos.x
                                     , cy = curr.mousePos.y
                                     , r = 40
-                                    , stroke = "black"
+                                    , stroke = "#888"
                                     }
                             in
                             { curr
@@ -246,8 +246,8 @@ showMenu isMenuOpen selected =
                 [ A.style "position" "absolute"
                 , A.style "top" (String.fromInt (circlePos.absoluteY + 80) ++ "px")
                 , A.style "left" (String.fromInt circlePos.absoluteX ++ "px")
-                , A.style "background" "#EEE"
-                , A.style "border" "1px solid grey"
+                , A.style "background" "#2a2a2a"
+                , A.style "border" "1px solid #444"
                 , A.style "border-radius" "5px"
                 , A.style "padding" "10px 30px"
                 ]
@@ -297,7 +297,7 @@ view model =
                 , stroke c.stroke
                 , fill
                     (if selectedCircle == Just c then
-                        "lightgrey"
+                        "#555"
 
                      else
                         "transparent"
@@ -332,7 +332,7 @@ view model =
             , svg
                 [ width "400px"
                 , height "400px"
-                , A.style "border" "1px solid lightgrey"
+                , A.style "border" "1px solid #444"
                 , E.on "mousemove" (D.map MouseMove decodeMousePos)
                 , E.onClick SelectOrAddCircle
 

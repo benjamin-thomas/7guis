@@ -201,7 +201,7 @@ view model =
         durationStr =
             String.fromInt model.duration
     in
-    div [ style "max-width" "200px" ]
+    div [ style "max-width" "350px" ]
         [ elapsedTimeDiv model.state durationStr
         , runningSecondsDiv model
         , buttonDiv model.state

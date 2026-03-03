@@ -200,7 +200,7 @@ component =
       renderError :: String -> H.ComponentHTML Action () m
       renderError err =
         HH.span
-          [ HP.style "color:lightgrey; margin-left:5px;" ]
+          [ HP.style "color:#f87171; margin-left:5px;" ]
           [ HH.text err ]
 
       errorStyle :: forall r i. { value :: String, self :: FocusedField } -> IProp (style :: String | r) i
@@ -210,7 +210,7 @@ component =
         in
           HP.style $
             if len > 1 && (len >= 10 || state.focusedField /= self) then
-              "background:red;"
+              "border-color:#ef4444;"
             else
               ""
 

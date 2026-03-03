@@ -87,9 +87,8 @@ update msg model =
 
 background : String -> Html.Attribute msg
 background klass =
-    -- I would normally just insert class name
     if klass == "error" then
-        style "background-color" "red"
+        style "border-color" "#ef4444"
 
     else
         style "" ""
@@ -117,7 +116,7 @@ view model =
         unvalidFahrenheit =
             unvalidate model.fahrenheit
     in
-    div [ style "margin-left" "20px", style "zoom" "1.3" ]
+    div []
         [ h1 [] [ text "Temp converter (Elm)" ]
         , div [ style "display" "flex", style "gap" "30px" ]
             [ temperature "Celsius" CelsiusChanged unvalidCelsius
@@ -129,7 +128,7 @@ view model =
                 div [] [ text <| cStr ++ "C° = " ++ fStr ++ "F°" ]
 
             _ ->
-                div [ style "color" "red" ] [ text "Cannot compute due to bad data!" ]
+                div [ style "color" "#f87171" ] [ text "Cannot compute due to bad data!" ]
         ]
 
 

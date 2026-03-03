@@ -202,12 +202,12 @@ component =
         let
           dist = distFromCenter (circle.x /\ circle.y) (toNumber state.mouseX /\ toNumber state.mouseY)
         in
-          SA.Named $ if dist < circle.r then "lightgrey" else "white"
+          SA.Named $ if dist < circle.r then "#555" else "transparent"
 
       mkCircle (circleId /\ circle) =
         SE.circle
           [ SA.fill $ circleColor circle
-          , SA.stroke (SA.Named "black")
+          , SA.stroke (SA.Named "#888")
           , SA.cx circle.x
           , SA.cy circle.y
           , SA.r circle.r
@@ -225,7 +225,7 @@ component =
         , SE.svg
             [ HE.onMouseMove MouseMoved
             , HE.onClick $ const DrawingAreaClicked
-            , HP.style "background:white"
+            , HP.style "background:#1a1a1a"
             ]
             (map mkCircle $ Map.toUnfoldable state.history.current)
 

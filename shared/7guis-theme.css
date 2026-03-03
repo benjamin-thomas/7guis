@@ -1,0 +1,256 @@
+/*
+ * 7GUIs Shared Dark Theme
+ * Extracted from rescript-7guis/src/index.css
+ * Applied to Elm and PureScript implementations via element-level styles
+ */
+
+:root {
+  /* Colors */
+  --color-bg: #1a1a1a;
+  --color-card: #2a2a2a;
+  --color-input: #333;
+  --color-border: #444;
+  --color-card-border: #383838;
+  --color-card-border-hover: #f59e0b;
+  --color-card-hover: #303030;
+  --color-button: #444;
+  --color-button-hover: #555;
+  --color-button-active: #4a4a4a;
+  --color-text: #fff;
+  --color-text-muted: #888;
+  --color-accent: #f59e0b;
+
+  /* Spacing */
+  --spacing-sm: 1rem;
+  --spacing-md: 2.5rem;
+  --spacing-lg: 3rem;
+  --spacing-xl: 5rem;
+
+  /* Sizing */
+  --control-height: 4rem;
+  --input-width: 150px;
+  --radius: 4px;
+  --radius-lg: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* === Element-level styles (auto-apply to Elm/PureScript) === */
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-md);
+}
+
+button {
+  font-family: inherit;
+  font-size: 1.4rem;
+  color: var(--color-text);
+  background: var(--color-button);
+  border: none;
+  padding: 0.5rem 1.5rem;
+  height: var(--control-height);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--color-button-hover);
+}
+
+button:active {
+  background: var(--color-button-active);
+}
+
+button:focus {
+  outline: 1px solid var(--color-accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input, select {
+  font-family: inherit;
+  font-size: 1.4rem;
+  color: var(--color-text);
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem var(--spacing-sm);
+  height: var(--control-height);
+}
+
+input:focus, select:focus {
+  outline: 1px solid var(--color-accent);
+}
+
+input[type="range"] {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  accent-color: var(--color-accent);
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+label {
+  font-size: 1.2rem;
+  color: var(--color-text);
+}
+
+meter {
+  width: 100%;
+  height: 1.5rem;
+  accent-color: var(--color-accent);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+th {
+  background: var(--color-card);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1.5rem 0;
+}
+
+/* === Class-based styles (shared across implementations) === */
+
+.task-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.task-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+}
+
+.card {
+  background: var(--color-card);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 220px;
+  transition: background 0.15s ease, transform 0.15s ease;
+  border: 1px solid var(--color-card-border);
+}
+
+.card:hover {
+  background: var(--color-card-hover);
+  text-decoration: none;
+}
+
+.card--interactive:hover {
+  border-color: var(--color-card-border-hover);
+}
+
+.back-link {
+  position: fixed;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 1.5rem;
+}
+
+.back-link:hover {
+  color: var(--color-accent);
+}
+
+.error-section {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-left: 4px solid #ef4444;
+  color: #f87171;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 1.1rem;
+}
+
+/* === Mobile responsive === */
+@media (max-width: 768px) {
+  body {
+    display: block;
+    padding: var(--spacing-sm);
+  }
+
+  .task-container {
+    min-height: calc(100vh - 2 * var(--spacing-sm));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  h1 {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .card {
+    width: 100%;
+    min-width: auto;
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .back-link {
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    font-size: 1.2rem;
+  }
+}
