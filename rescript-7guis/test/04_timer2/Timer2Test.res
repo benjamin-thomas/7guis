@@ -66,10 +66,22 @@ describe("Timer2 state machine", () => {
     let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Idle}
 
     // Act
-    let (newModel, effects) = Timer2.update(model, Timer2.GotServerResponse(Ok()))
+    let (newModel, effects) = Timer2.update(model, Timer2.GotServerNotification(Ok()))
 
     // Assert
     t->expect(newModel.serverStatus)->Expect.toEqual(Timer2.Saved)
+    t->expect(effects)->Expect.toEqual([Timer2.DismissNotificationAfter(1000)])
+  })
+
+  test("dismiss notification: Saved => Idle", t => {
+    // Arrange
+    let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Saved}
+
+    // Act
+    let (newModel, effects) = Timer2.update(model, Timer2.DismissNotification)
+
+    // Assert
+    t->expect(newModel.serverStatus)->Expect.toEqual(Timer2.Idle)
     t->expect(effects)->Expect.toEqual([])
   })
 
@@ -78,7 +90,7 @@ describe("Timer2 state machine", () => {
     let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Idle}
 
     // Act
-    let (newModel, effects) = Timer2.update(model, Timer2.GotServerResponse(Error("Network error")))
+    let (newModel, effects) = Timer2.update(model, Timer2.GotServerNotification(Error("Network error")))
 
     // Assert
     t->expect(newModel.serverStatus)->Expect.toEqual(Timer2.Failed("Network error"))

@@ -18,12 +18,14 @@ type msg =
   | DurationChanged(int)
   | StartBtnClicked
   | StopBtnClicked
-  | GotServerResponse(result<unit, string>)
+  | GotServerNotification(result<unit, string>)
+  | DismissNotification
 
 type effect =
   | StartTimer
   | StopTimer
   | NotifyServer(float)
+  | DismissNotificationAfter(int)
 
 let update = (model, msg) => {
   switch msg {
@@ -42,7 +44,8 @@ let update = (model, msg) => {
   | DurationChanged(ms) => ({...model, durationMs: ms}, [])
   | StartBtnClicked => ({...model, timerState: Running({elapsedMs: 0.0})}, [StartTimer])
   | StopBtnClicked => ({...model, timerState: Stopped}, [StopTimer])
-  | GotServerResponse(Ok()) => ({...model, serverStatus: Saved}, [])
-  | GotServerResponse(Error(err)) => ({...model, serverStatus: Failed(err)}, [])
+  | GotServerNotification(Ok()) => ({...model, serverStatus: Saved}, [DismissNotificationAfter(1000)])
+  | GotServerNotification(Error(err)) => ({...model, serverStatus: Failed(err)}, [])
+  | DismissNotification => ({...model, serverStatus: Idle}, [])
   }
 }
