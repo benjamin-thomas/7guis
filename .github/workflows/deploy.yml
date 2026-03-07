@@ -33,7 +33,7 @@ jobs:
           npm ci
           npm run res:build
           npm test
-          npx vite build --base=/7guis/rescript/
+          npx vite build --base=/7guis/rescript/react/
 
       # ============ Elm ============
       - name: Install Elm
@@ -51,7 +51,7 @@ jobs:
             if [ -d "elm/$dir" ] && [ -f "elm/$dir/src/Main.elm" ]; then
               echo "Building elm/$dir..."
               cd "elm/$dir"
-              rm -rf elm-stuff
+              rm -r elm-stuff
               elm make src/Main.elm --optimize --output=elm.js
               cp ../template.html index.html
               cd ../..
@@ -61,7 +61,7 @@ jobs:
           if [ -d "elm/counter2" ] && [ -f "elm/counter2/src/Main.elm" ]; then
             echo "Building elm/counter2..."
             cd elm/counter2
-            rm -rf elm-stuff
+            rm -r elm-stuff
             elm make src/Main.elm --optimize --output=index.html
             cd ../..
           fi
@@ -100,7 +100,7 @@ jobs:
       # ============ Assemble docs/ ============
       - name: Assemble docs folder
         run: |
-          mkdir -p docs/rescript
+          mkdir -p docs/rescript/react
           mkdir -p docs/elm
           mkdir -p docs/purescript/halogen
 
@@ -108,7 +108,7 @@ jobs:
           cp landing/index.html docs/
 
           # ReScript
-          cp -r rescript-7guis/dist/* docs/rescript/
+          cp -r rescript-7guis/dist/* docs/rescript/react/
 
           # Elm — themed projects (crud excluded - requires backend server)
           for dir in counter temp_converter flight_booker timer circle_drawer cells; do
@@ -124,6 +124,9 @@ jobs:
             mkdir -p "docs/elm/counter2"
             cp "elm/counter2/index.html" "docs/elm/counter2/"
           fi
+          # Elm landing page
+          cp elm/index.html docs/elm/
+          cp shared/7guis-theme.css docs/elm/
 
           # PureScript/Halogen
           cp purescript/halogen/index.html docs/purescript/halogen/
@@ -131,7 +134,7 @@ jobs:
           for dir in counter temp_converter flight_booker timer crud circle_drawer; do
             if [ -d "purescript/halogen/$dir/prod" ]; then
               mkdir -p "docs/purescript/halogen/$dir"
-              cp -r "purescript/halogen/$dir/prod" "docs/purescript/halogen/$dir/"
+              cp -r "purescript/halogen/$dir/prod/." "docs/purescript/halogen/$dir/"
             fi
           done
 
