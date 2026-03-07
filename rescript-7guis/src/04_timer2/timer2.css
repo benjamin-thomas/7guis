@@ -1,0 +1,11 @@
+.timer-toast {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #2d5a2d;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.timer-toast--error {
+  background: #5a2d2d;
+}
