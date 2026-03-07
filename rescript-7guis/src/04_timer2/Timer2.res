@@ -10,6 +10,7 @@ type model = {
 type msg =
   | Ticked(float)
   | StartBtnClicked
+  | StopBtnClicked
 
 type effect =
   | StartTimer
@@ -30,5 +31,6 @@ let update = (model, msg) => {
     | Stopped => panic("Ticked while Stopped: interval should have been cleared")
     }
   | StartBtnClicked => ({...model, timerState: Running({elapsedMs: 0.0})}, [StartTimer])
+  | StopBtnClicked => ({...model, timerState: Stopped}, [StopTimer])
   }
 }
