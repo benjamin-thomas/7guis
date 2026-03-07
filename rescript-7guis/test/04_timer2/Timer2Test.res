@@ -6,6 +6,7 @@ describe("Timer2 state machine", () => {
     let model: Timer2.model = {
       timerState: Running({elapsedMs: 500.0}),
       durationMs: 3000,
+      serverStatus: Idle,
     }
 
     // Act
@@ -21,6 +22,7 @@ describe("Timer2 state machine", () => {
     let model: Timer2.model = {
       timerState: Running({elapsedMs: 2900.0}),
       durationMs: 3000,
+      serverStatus: Idle,
     }
 
     // Act
@@ -28,7 +30,7 @@ describe("Timer2 state machine", () => {
 
     // Assert
     t->expect(newModel.timerState)->Expect.toEqual(Stopped)
-    t->expect(effects)->Expect.toEqual([Timer2.StopTimer])
+    t->expect(effects)->Expect.toEqual([Timer2.StopTimer, Timer2.NotifyServer(3100.0)])
   })
 
   test("stop button while running: Running => Stopped, produces StopTimer", t => {
@@ -36,6 +38,7 @@ describe("Timer2 state machine", () => {
     let model: Timer2.model = {
       timerState: Running({elapsedMs: 1500.0}),
       durationMs: 3000,
+      serverStatus: Idle,
     }
 
     // Act
@@ -48,7 +51,7 @@ describe("Timer2 state machine", () => {
 
   test("duration changed: updates durationMs, no effect", t => {
     // Arrange
-    let model: Timer2.model = {timerState: Stopped, durationMs: 3000}
+    let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Idle}
 
     // Act
     let (newModel, effects) = Timer2.update(model, Timer2.DurationChanged(5000))
@@ -58,9 +61,33 @@ describe("Timer2 state machine", () => {
     t->expect(effects)->Expect.toEqual([])
   })
 
+  test("server response ok: status becomes Saved", t => {
+    // Arrange
+    let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Idle}
+
+    // Act
+    let (newModel, effects) = Timer2.update(model, Timer2.GotServerResponse(Ok()))
+
+    // Assert
+    t->expect(newModel.serverStatus)->Expect.toEqual(Timer2.Saved)
+    t->expect(effects)->Expect.toEqual([])
+  })
+
+  test("server response error: status becomes Failed", t => {
+    // Arrange
+    let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Idle}
+
+    // Act
+    let (newModel, effects) = Timer2.update(model, Timer2.GotServerResponse(Error("Network error")))
+
+    // Assert
+    t->expect(newModel.serverStatus)->Expect.toEqual(Timer2.Failed("Network error"))
+    t->expect(effects)->Expect.toEqual([])
+  })
+
   test("start button: Stopped => Running, produces StartTimer", t => {
     // Arrange
-    let model: Timer2.model = {timerState: Stopped, durationMs: 3000}
+    let model: Timer2.model = {timerState: Stopped, durationMs: 3000, serverStatus: Idle}
 
     // Act
     let (newModel, effects) = Timer2.update(model, Timer2.StartBtnClicked)
