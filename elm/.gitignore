@@ -1,7 +1,7 @@
 elm-stuff/
 
-# elm-live generated
-index.html
+# elm-live / build script generated
+*/index.html
 
 # custom builds
 build/
