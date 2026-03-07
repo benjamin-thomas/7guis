@@ -51,7 +51,7 @@ jobs:
             if [ -d "elm/$dir" ] && [ -f "elm/$dir/src/Main.elm" ]; then
               echo "Building elm/$dir..."
               cd "elm/$dir"
-              rm -r elm-stuff
+              rm -rf elm-stuff
               elm make src/Main.elm --optimize --output=elm.js
               cp ../template.html index.html
               cd ../..
@@ -61,7 +61,7 @@ jobs:
           if [ -d "elm/counter2" ] && [ -f "elm/counter2/src/Main.elm" ]; then
             echo "Building elm/counter2..."
             cd elm/counter2
-            rm -r elm-stuff
+            rm -rf elm-stuff
             elm make src/Main.elm --optimize --output=index.html
             cd ../..
           fi
