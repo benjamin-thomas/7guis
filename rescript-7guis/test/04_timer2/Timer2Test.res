@@ -46,6 +46,18 @@ describe("Timer2 state machine", () => {
     t->expect(effects)->Expect.toEqual([Timer2.StopTimer])
   })
 
+  test("duration changed: updates durationMs, no effect", t => {
+    // Arrange
+    let model: Timer2.model = {timerState: Stopped, durationMs: 3000}
+
+    // Act
+    let (newModel, effects) = Timer2.update(model, Timer2.DurationChanged(5000))
+
+    // Assert
+    t->expect(newModel.durationMs)->Expect.toBe(5000)
+    t->expect(effects)->Expect.toEqual([])
+  })
+
   test("start button: Stopped => Running, produces StartTimer", t => {
     // Arrange
     let model: Timer2.model = {timerState: Stopped, durationMs: 3000}

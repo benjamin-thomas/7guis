@@ -1,3 +1,5 @@
+// TODO: ajouter un effet async (NotifyCompletion via HTTP) pour démontrer le pattern retour d'effet
+
 type timerState =
   | Stopped
   | Running({elapsedMs: float})
@@ -9,6 +11,7 @@ type model = {
 
 type msg =
   | Ticked(float)
+  | DurationChanged(int)
   | StartBtnClicked
   | StopBtnClicked
 
@@ -30,6 +33,7 @@ let update = (model, msg) => {
       }
     | Stopped => panic("Ticked while Stopped: interval should have been cleared")
     }
+  | DurationChanged(ms) => ({...model, durationMs: ms}, [])
   | StartBtnClicked => ({...model, timerState: Running({elapsedMs: 0.0})}, [StartTimer])
   | StopBtnClicked => ({...model, timerState: Stopped}, [StopTimer])
   }
