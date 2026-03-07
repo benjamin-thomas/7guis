@@ -243,36 +243,24 @@ showMenu isMenuOpen selected =
     case ( isMenuOpen, selected ) of
         ( True, Just ( circle, circlePos ) ) ->
             H.span
-                [ A.style "position" "absolute"
+                [ A.class "circle-drawer-popup"
+                , A.style "position" "absolute"
                 , A.style "top" (String.fromInt (circlePos.absoluteY + 80) ++ "px")
                 , A.style "left" (String.fromInt circlePos.absoluteX ++ "px")
-                , A.style "background" "#2a2a2a"
-                , A.style "border" "1px solid #444"
-                , A.style "border-radius" "5px"
-                , A.style "padding" "10px 30px"
                 ]
-                [ H.div
-                    [ A.style "display" "flex"
-                    , A.style "flex-direction" "column"
+                [ H.button [ A.class "circle-drawer-popup-close", E.onClick CloseMenuAndUnselect ] [ H.text "✕" ]
+                , H.div [ A.class "circle-drawer-popup-label" ]
+                    [ H.text "Adjust diameter" ]
+                , H.input
+                    [ A.type_ "range"
+                    , A.class "circle-drawer-slider"
+                    , A.min "10"
+                    , A.max "100"
+                    , A.value (String.fromInt circle.r)
+                    , E.onInput RadiusChanged
+                    , onMouseUp CloseMenuAndUnselect
                     ]
-                    [ H.label []
-                        [ H.text <|
-                            "Adjust diameter of circle at ("
-                                ++ String.fromInt circle.cx
-                                ++ ", "
-                                ++ String.fromInt circle.cy
-                                ++ ")"
-                        ]
-                    , H.input
-                        [ A.type_ "range"
-                        , A.min "10"
-                        , A.max "100"
-                        , A.value (String.fromInt circle.r)
-                        , E.onInput RadiusChanged
-                        , onMouseUp CloseMenuAndUnselect
-                        ]
-                        []
-                    ]
+                    []
                 ]
 
         _ ->
@@ -294,63 +282,37 @@ view model =
                 [ cx (String.fromInt c.cx)
                 , cy (String.fromInt c.cy)
                 , r (String.fromInt c.r)
-                , stroke c.stroke
+                , stroke "#222"
                 , fill
                     (if selectedCircle == Just c then
-                        "#555"
+                        "#666"
 
                      else
-                        "transparent"
+                        "#555"
                     )
                 , E.preventDefaultOn "contextmenu" (D.map alwaysPreventDefault mouseRightClickDecoder)
                 ]
                 []
     in
-    H.div
-        []
-        [ H.h1
-            [ A.style "text-align" "center"
-            , A.style "margin-top" "50px"
-            , A.style "margin-bottom" "30px"
-            ]
-            [ H.text "Circle Drawer" ]
-
-        -- , H.pre [ A.style "white-space" "pre-wrap" ]
-        --     [ H.text <|
-        --         Debug.toString state.mousePos
-        --             ++ " "
-        --             ++ Debug.toString state.selected
-        --             ++ " "
-        --             ++ Debug.toString state.isMenuOpen
-        --     ]
-        , H.div [ A.style "text-align" "center" ]
-            [ H.div [ A.style "margin" "10px" ]
+    H.div [ A.class "task-container" ]
+        [ H.h1 [] [ H.text "Circle Drawer" ]
+        , H.div [ A.class "card circle-drawer" ]
+            [ H.div [ A.class "circle-drawer-toolbar" ]
                 [ H.button [ E.onClick Undo ] [ H.text "Undo" ]
-                , H.span [ A.style "padding" "2px" ] []
                 , H.button [ E.onClick Redo ] [ H.text "Redo" ]
                 ]
-            , svg
-                [ width "400px"
-                , height "400px"
-                , A.style "border" "1px solid #444"
-                , E.on "mousemove" (D.map MouseMove decodeMousePos)
-                , E.onClick SelectOrAddCircle
-
-                -- Disables doubleclick behaviour on Edge (a search menu pops up)
-                , A.style "user-select" "none"
+            , H.div [ A.class "circle-drawer-svg-container" ]
+                [ svg
+                    [ width "100%"
+                    , height "100%"
+                    , A.style "user-select" "none"
+                    , E.on "mousemove" (D.map MouseMove decodeMousePos)
+                    , E.onClick SelectOrAddCircle
+                    ]
+                    (List.map viewCircle state.circles)
                 ]
-                (List.map viewCircle state.circles)
             , showMenu state.isMenuOpen state.selected
             ]
-
-        -- , H.pre [ A.style "white-space" "pre-wrap" ]
-        --     [ H.text <| "CIRCLES:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) state.circles) ]
-        -- , H.pre [ A.style "white-space" "pre-wrap" ]
-        --     [ H.text <| "PREV:\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.prev)
-        --     ]
-        -- , H.pre [ A.style "white-space" "pre-wrap" ]
-        --     [ H.text <| "NEXT\n -" ++ (String.join "\n -" <| List.map (\c -> Debug.toString c) model.next)
-        --     ]
         ]
 
 

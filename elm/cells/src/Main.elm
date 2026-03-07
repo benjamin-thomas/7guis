@@ -31,8 +31,10 @@ update msg model =
 
 view : Model -> H.Html msg
 view _ =
-    H.div []
-        [ H.table []
+    H.div [ A.class "task-container" ]
+        [ H.h1 [] [ H.text "Cells" ]
+        , H.div [ A.class "card" ]
+            [ H.table []
             [ H.thead []
                 [ H.tr []
                     [ H.th [] []
@@ -58,6 +60,7 @@ view _ =
                     , H.td [ A.contenteditable True ] [ H.text "D val" ]
                     ]
                 ]
+            ]
             ]
         ]
 

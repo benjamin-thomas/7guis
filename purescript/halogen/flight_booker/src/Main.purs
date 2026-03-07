@@ -21,7 +21,6 @@ import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Halogen.HTML.Properties (IProp)
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 import Parsing (ParseError(..))
@@ -161,8 +160,8 @@ component =
   initialState _ =
     Editing
       { flightOption: OneWayFlight
-      , from: ""
-      , to: ""
+      , from: "27.03.2014"
+      , to: "27.03.2014"
       , focusedField: FromField
       }
 
@@ -197,127 +196,68 @@ component =
   renderEditing :: Editing -> H.ComponentHTML Action () m
   renderEditing state =
     let
-      renderError :: String -> H.ComponentHTML Action () m
-      renderError err =
-        HH.span
-          [ HP.style "color:#f87171; margin-left:5px;" ]
-          [ HH.text err ]
-
-      errorStyle :: forall r i. { value :: String, self :: FocusedField } -> IProp (style :: String | r) i
-      errorStyle { value, self } =
-        let
-          len = String.length value
-        in
-          HP.style $
-            if len > 1 && (len >= 10 || state.focusedField /= self) then
-              "border-color:#ef4444;"
-            else
-              ""
-
       flightOptionInput :: H.ComponentHTML Action () m
-      flightOptionInput = HH.select [ HE.onSelectedIndexChange FlightOptionChanged ]
-        [ HH.option_ [ HH.text "One Way" ]
-        , HH.option_ [ HH.text "Return" ]
+      flightOptionInput = HH.select [ HP.classes [ H.ClassName "flight-select" ], HE.onSelectedIndexChange FlightOptionChanged ]
+        [ HH.option_ [ HH.text "one-way flight" ]
+        , HH.option_ [ HH.text "return flight" ]
         ]
 
-      fromInput :: { fromError :: Maybe String } -> H.ComponentHTML Action () m
-      fromInput { fromError } =
+      dateInput :: { error :: Maybe String, value :: String, disabled :: Boolean, onChange :: String -> Action } -> H.ComponentHTML Action () m
+      dateInput { error, value, disabled, onChange } =
         let
-          mkInput style =
-            HH.input
-              ( mapMaybe identity
-                  [ Just $ HP.placeholder "From"
-                  , Just $ HP.value state.from
-                  , Just $ HE.onValueInput FromChanged
-                  , Just $ HE.onFocus $ (\_ -> FocusChanged FromField)
-                  , style
-                  ]
-              )
+          classes = case error of
+            Nothing -> [ H.ClassName "input" ]
+            Just _ -> [ H.ClassName "input", H.ClassName "input--invalid" ]
         in
-          HH.div_
-            ( case fromError of
-                Nothing ->
-                  [ mkInput Nothing
-                  ]
-                Just err ->
-                  [ mkInput $ Just $ errorStyle
-                      { value: state.from
-                      , self: FromField
-                      }
-                  , renderError err
-                  ]
-            )
+          HH.input
+            [ HP.value value
+            , HE.onValueInput onChange
+            , HP.disabled disabled
+            , HP.classes classes
+            ]
 
-      toInput :: { toError :: Maybe String, disabled :: Boolean } -> H.ComponentHTML Action () m
-      toInput { toError, disabled } =
-        let
-          mkInput style =
-            HH.input
-              ( mapMaybe identity
-                  [ Just $ HP.placeholder "To"
-                  , Just $ HP.value state.to
-                  , Just $ HE.onValueInput ToChanged
-                  , Just $ HE.onFocus $ (\_ -> FocusChanged ToField)
-                  , Just $ HP.disabled disabled
-                  , style
-                  ]
-              )
-        in
-          HH.div_
-            case toError of
-              Nothing ->
-                [ mkInput Nothing
-                ]
-
-              Just err ->
-                [ mkInput $ Just $ errorStyle
-                    { value: state.to
-                    , self: ToField
-                    }
-                , renderError err
-                ]
-
-      renderGlobalErrors { globalErrors } =
-        if null globalErrors then
-          HH.div [ HP.style "color:green" ] [ HH.text "All good ✓" ]
-        else
-          HH.div_ (map (renderError) globalErrors)
-
-      submitBtn :: { globalErrors :: Array String } -> H.ComponentHTML Action () m
-      submitBtn { globalErrors } = HH.button
+      submitBtn :: { disabled :: Boolean } -> H.ComponentHTML Action () m
+      submitBtn { disabled } = HH.button
         [ HE.onClick \_ -> Submit
-        , HP.disabled $ (not <<< null) globalErrors
+        , HP.disabled disabled
         ]
         [ HH.text "Book" ]
 
     in
-      HH.div_
+      HH.div [ HP.classes [ H.ClassName "task-container" ] ]
         [ HH.h1_ [ HH.text "Flight Booker" ]
-        , HH.code_ [ HH.text "Valid date format is: dd.mm.yyyy" ]
-        -- , HH.code_ [ HH.text $ show state ]
-        , HH.div [ HP.style "margin-top: 20px" ]
+        , HH.div [ HP.classes [ H.ClassName "card", H.ClassName "flight-booker" ] ]
             ( case state.flightOption of
                 OneWayFlight ->
                   let
                     { fromError, globalErrors } = checkGlobalOneWay { from: state.from }
                   in
                     [ flightOptionInput
-                    , fromInput { fromError }
-                    , toInput { disabled: true, toError: Nothing }
-                    , renderGlobalErrors { globalErrors }
-                    , submitBtn { globalErrors }
+                    , dateInput { error: fromError, value: state.from, disabled: false, onChange: FromChanged }
+                    , dateInput { error: Nothing, value: state.to, disabled: true, onChange: ToChanged }
+                    , submitBtn { disabled: not (null globalErrors) }
                     ]
 
                 ReturnFlight ->
                   let
                     { fromError, toError, globalErrors } = checkGlobalReturn { from: state.from, to: state.to }
+                    returnBeforeDep = case checkDate state.from, checkDate state.to of
+                      Right fromDate, Right toDate -> fromDate > toDate
+                      _, _ -> false
                   in
                     [ flightOptionInput
-                    , fromInput { fromError }
-                    , toInput { disabled: false, toError }
-                    , renderGlobalErrors { globalErrors }
-                    , submitBtn { globalErrors }
+                    , dateInput { error: fromError, value: state.from, disabled: false, onChange: FromChanged }
+                    , dateInput { error: toError, value: state.to, disabled: false, onChange: ToChanged }
+                    , submitBtn { disabled: not (null globalErrors) }
                     ]
+                    <>
+                      ( if returnBeforeDep then
+                          [ HH.div [ HP.classes [ H.ClassName "error-section" ] ]
+                              [ HH.text "Return date is before departure date" ]
+                          ]
+                        else
+                          []
+                      )
             )
         ]
 
@@ -325,4 +265,3 @@ component =
   render = case _ of
     Editing state -> renderEditing state
     Confirmed msg -> HH.text msg
-

@@ -48,8 +48,10 @@ let make = () => {
 
   switch route {
   | Index =>
-    <div className="index-container">
-      <h1 className="index-title"> {React.string("7GUIs")} </h1>
+    <>
+      <a href="../../" className="back-link"> {React.string("< Back to root")} </a>
+      <div className="index-container">
+        <h1 className="index-title"> {React.string("7GUIs")} </h1>
       <div className="index-grid">
         <a href="#counter" className="card card--interactive"> {React.string("Counter")} </a>
         <a href="#temperature-converter" className="card card--interactive">
@@ -65,7 +67,8 @@ let make = () => {
         </a>
         <a href="#cells" className="card card--interactive"> {React.string("Cells")} </a>
       </div>
-    </div>
+      </div>
+    </>
   | Counter => withBackLink(<Counter />)
   | TemperatureConverter => withBackLink(<TemperatureConverter />)
   | FlightBooker => withBackLink(<FlightBooker />)

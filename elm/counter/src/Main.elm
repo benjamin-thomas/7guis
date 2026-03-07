@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, h1, input, span, text)
-import Html.Attributes exposing (disabled, readonly, style, value)
+import Html.Attributes exposing (class, readonly, value)
 import Html.Events exposing (onClick)
 
 
@@ -15,29 +15,13 @@ init =
     0
 
 
-cssDisableSelection : List (Html.Attribute Msg)
-cssDisableSelection =
-    [ style "user-select" "none"
-    , style "pointer-events" "none"
-    ]
-
-
 view : Model -> Html Msg
 view model =
-    div []
-        [ div []
-            [ h1 []
-                [ text "Counter example"
-                ]
-
-            -- Extra div required to prevent click events bubbling up to the h1
-            , div []
-                [ span
-                    cssDisableSelection
-                    [ input [ value (String.fromInt model), readonly True, disabled True ] []
-                    ]
-                , button [ onClick Inc ] [ text "count" ]
-                ]
+    div [ class "task-container" ]
+        [ h1 [] [ text "Counter" ]
+        , div [ class "card counter-controls" ]
+            [ input [ class "input counter-display", value (String.fromInt model), readonly True ] []
+            , button [ onClick Inc ] [ text "Count" ]
             ]
         ]
 

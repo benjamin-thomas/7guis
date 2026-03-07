@@ -6,6 +6,7 @@
   , "effect"
   , "halogen"
   , "halogen-subscriptions"
+  , "integers"
   , "maybe"
   , "now"
   , "numbers"

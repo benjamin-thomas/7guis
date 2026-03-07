@@ -5,7 +5,6 @@ module Main
 import Prelude
 
 import Data.Generic.Rep (class Generic)
-import Data.Int (fromString)
 import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -17,7 +16,6 @@ import Effect.Class (class MonadEffect)
 import Effect.Class.Console (log)
 import Halogen as H
 import Halogen.Aff as HA
-import Halogen.HTML (IProp, prop)
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -51,7 +49,7 @@ data Action
   = TermChanged String
   | FirstNameChanged String
   | LastNameChanged String
-  | PersonSelected String
+  | PersonSelected Int
   | CreateBtnClicked
   | UpdateBtnClicked
   | DeleteBtnClicked
@@ -67,13 +65,10 @@ type Person =
   }
 
 filterDb :: String -> Map Int Person -> Map Int Person
-filterDb term = M.filter (\person -> startsWith term person.firstName)
+filterDb term = M.filter (\person -> startsWith term person.lastName)
   where
   startsWith :: String -> String -> Boolean
   startsWith pat src = isJust $ stripPrefix (Pattern $ toLower pat) (toLower src)
-
-size :: forall r i. Int -> IProp (size :: Int | r) i
-size = prop (H.PropName "size")
 
 component :: forall query output m. MonadEffect m => H.Component query Unit output m
 component =
@@ -88,25 +83,21 @@ component =
   initialState :: Unit -> State
   initialState _ =
     let
-      firstPerson = Tuple 1 { firstName: "John", lastName: "Doe" }
+      secondPerson = Tuple 2 { firstName: "Jane", lastName: "Doe" }
 
       initialDb :: Map Int Person
       initialDb = M.fromFoldable
-        [ firstPerson
-        , Tuple 2 { firstName: "Jane", lastName: "Doe" }
-        , Tuple 3 { firstName: "Joe", lastName: "Smith" }
-        , Tuple 4 { firstName: "Bill", lastName: "Carpenter" }
-        , Tuple 5 { firstName: "Mark", lastName: "Thompson" }
-        , Tuple 6 { firstName: "Jill", lastName: "Valentine" }
-        , Tuple 7 { firstName: "Zak", lastName: "Wylde" }
+        [ Tuple 1 { firstName: "John", lastName: "Doe" }
+        , secondPerson
+        , Tuple 3 { firstName: "Mark", lastName: "Twain" }
         ]
     in
       { data: Loaded initialDb
       , form:
           { term: ""
-          , firstName: (snd firstPerson).firstName
-          , lastName: (snd firstPerson).lastName
-          , selectedPersonId: (Just $ fst firstPerson)
+          , firstName: (snd secondPerson).firstName
+          , lastName: (snd secondPerson).lastName
+          , selectedPersonId: (Just $ fst secondPerson)
           }
       }
 
@@ -123,27 +114,26 @@ component =
       LastNameChanged str ->
         H.modify_ _ { form { lastName = str } }
 
-      PersonSelected strId -> H.modify_ \state ->
-        fromMaybe state $ (fromString strId) <#> \id ->
-          case state.data of
-            Loaded db ->
-              case M.lookup id db of
-                Nothing ->
-                  state
-                    { form
-                        { selectedPersonId = Nothing
-                        , firstName = ""
-                        , lastName = ""
-                        }
-                    }
-                Just person ->
-                  state
-                    { form
-                        { selectedPersonId = Just id
-                        , firstName = person.firstName
-                        , lastName = person.lastName
-                        }
-                    }
+      PersonSelected personId -> H.modify_ \state ->
+        case state.data of
+          Loaded db ->
+            case M.lookup personId db of
+              Nothing ->
+                state
+                  { form
+                      { selectedPersonId = Nothing
+                      , firstName = ""
+                      , lastName = ""
+                      }
+                  }
+              Just person ->
+                state
+                  { form
+                      { selectedPersonId = Just personId
+                      , firstName = person.firstName
+                      , lastName = person.lastName
+                      }
+                  }
 
       CreateBtnClicked ->
         H.modify_ \state ->
@@ -225,71 +215,72 @@ component =
 
   render :: State -> H.ComponentHTML Action () m
   render state =
-    HH.div_
-      [ HH.h1_ [ HH.text "CRUD example" ]
+    HH.div [ HP.classes [ H.ClassName "task-container" ] ]
+      [ HH.h1_ [ HH.text "CRUD" ]
       , case state.data of
           Loaded db ->
             renderLoaded (filterDb state.form.term db) state.form
-      -- , HH.div [ HP.style "margin-top:40px" ] [ HH.code_ [ HH.text $ show state ] ]
       ]
 
   renderLoaded :: Map Int Person -> Form -> H.ComponentHTML Action () m
   renderLoaded db form =
-    HH.div_
-      [ HH.div [ HP.id "form" ]
-          [ HH.div_
-              [ HH.div [ HP.classes [ H.ClassName "left" ] ]
-                  [ HH.div [ HP.id "prefix-section" ]
-                      [ HH.label_ [ HH.text "Filter prefix:" ]
-                      , HH.input
-                          [ HP.value form.term
-                          -- , HE.onValueChange TermChanged -- changes on blur
-                          , HE.onValueInput TermChanged
-                          ]
-                      ]
-                  , HH.div [ HP.id "people" ]
-                      [ HH.select
-                          [ size 8
-                          , HE.onValueChange PersonSelected
-                          , HP.autofocus true
-                          ]
-                          ( map
-                              ( \(Tuple personId person) ->
-                                  HH.option
-                                    [ HP.value $ show personId
-                                    , HP.selected $ Just personId == form.selectedPersonId
-                                    ]
-                                    [ HH.text $ person.firstName <> " " <> person.lastName
-                                    ]
-                              )
-                              (M.toUnfoldable db)
-                          )
+    HH.div [ HP.classes [ H.ClassName "card", H.ClassName "crud" ] ]
+      [ HH.div [ HP.classes [ H.ClassName "crud-columns" ] ]
+          [ HH.div [ HP.classes [ H.ClassName "crud-col-left" ] ]
+              [ HH.div [ HP.classes [ H.ClassName "crud-field" ] ]
+                  [ HH.label [ HP.classes [ H.ClassName "crud-label" ] ] [ HH.text "Filter prefix:" ]
+                  , HH.input
+                      [ HP.classes [ H.ClassName "crud-input" ]
+                      , HP.value form.term
+                      , HE.onValueInput TermChanged
                       ]
                   ]
+              , HH.div
+                  [ HP.classes [ H.ClassName "crud-listbox" ]
+                  , HP.tabIndex 0
+                  , HP.attr (HH.AttrName "autofocus") ""
+                  ]
+                  ( map
+                      ( \(Tuple personId person) ->
+                          HH.div
+                            [ HP.classes $
+                                [ H.ClassName "crud-listbox-item" ] <>
+                                  ( if Just personId == form.selectedPersonId then
+                                      [ H.ClassName "crud-listbox-item--selected" ]
+                                    else
+                                      []
+                                  )
+                            , HE.onClick \_ -> PersonSelected personId
+                            ]
+                            [ HH.text $ person.lastName <> ", " <> person.firstName
+                            ]
+                      )
+                      (M.toUnfoldable db)
+                  )
+              ]
 
-              , HH.div [ HP.classes [ H.ClassName "right" ] ]
-                  [ HH.div_
-                      [ HH.label_ [ HH.text "Name:" ]
-                      , HH.input
-                          [ HP.value form.firstName
-                          , HE.onValueInput FirstNameChanged
-                          ]
+          , HH.div [ HP.classes [ H.ClassName "crud-col-right" ] ]
+              [ HH.div [ HP.classes [ H.ClassName "crud-field" ] ]
+                  [ HH.label [ HP.classes [ H.ClassName "crud-label" ] ] [ HH.text "Name:" ]
+                  , HH.input
+                      [ HP.classes [ H.ClassName "crud-input" ]
+                      , HP.value form.firstName
+                      , HE.onValueInput FirstNameChanged
                       ]
-                  , HH.div_
-                      [ HH.label_ [ HH.text "Surname:" ]
-                      , HH.input
-                          [ HP.value form.lastName
-                          , HE.onValueInput LastNameChanged
-                          ]
+                  ]
+              , HH.div [ HP.classes [ H.ClassName "crud-field" ] ]
+                  [ HH.label [ HP.classes [ H.ClassName "crud-label" ] ] [ HH.text "Surname:" ]
+                  , HH.input
+                      [ HP.classes [ H.ClassName "crud-input" ]
+                      , HP.value form.lastName
+                      , HE.onValueInput LastNameChanged
                       ]
-
                   ]
               ]
-
-          , HH.div [ HP.id "buttons" ]
-              [ HH.button [ HE.onClick (const CreateBtnClicked) ] [ HH.text "Create" ]
-              , HH.button [ HE.onClick (const UpdateBtnClicked) ] [ HH.text "Update" ]
-              , HH.button [ HE.onClick (const DeleteBtnClicked) ] [ HH.text "Delete" ]
-              ]
+          ]
+      , HH.div [ HP.classes [ H.ClassName "crud-buttons" ] ]
+          [ HH.button [ HE.onClick (const CreateBtnClicked) ] [ HH.text "Create" ]
+          , HH.button [ HE.onClick (const UpdateBtnClicked) ] [ HH.text "Update" ]
+          , HH.button [ HE.onClick (const DeleteBtnClicked) ] [ HH.text "Delete" ]
           ]
       ]

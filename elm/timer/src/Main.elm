@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes as Attrs exposing (style, type_)
+import Html.Attributes as Attrs exposing (class, type_)
 import Html.Events exposing (onClick, onInput)
 import Task
 import Time
@@ -119,30 +119,29 @@ update msg model =
 
 durationDiv : String -> Html Msg
 durationDiv durationStr =
-    div []
-        [ div [ style "margin-top" "15px" ]
-            [ label []
-                [ text <| "Duration: " ++ durationStr ++ "ms" ]
-            , input
-                [ type_ "range"
-                , Attrs.value durationStr
-                , Attrs.min "0"
-                , Attrs.max "10000"
-                , Attrs.step "500"
-                , onInput ChangedDuration
-                , style "width" "100%"
-                ]
-                []
+    div [ class "timer-row" ]
+        [ label [ class "timer-label" ]
+            [ text <| "Duration: " ++ durationStr ++ "ms" ]
+        , input
+            [ type_ "range"
+            , class "timer-slider"
+            , Attrs.value durationStr
+            , Attrs.min "0"
+            , Attrs.max "10000"
+            , Attrs.step "500"
+            , onInput ChangedDuration
             ]
+            []
         ]
 
 
 elapsedTimeDiv : State -> String -> Html msg
 elapsedTimeDiv state durationStr =
-    div []
-        [ label [] [ text "Elapsed Time:" ]
-        , meter
-            [ Attrs.value
+    div [ class "timer-row" ]
+        [ label [ class "timer-label" ] [ text "Elapsed Time:" ]
+        , node "progress"
+            [ class "timer-progress"
+            , Attrs.value
                 (case state of
                     Running (Elapsed elapsed) _ ->
                         String.fromInt elapsed
@@ -153,9 +152,7 @@ elapsedTimeDiv state durationStr =
                     _ ->
                         "0"
                 )
-            , Attrs.min "0"
             , Attrs.max durationStr
-            , style "width" "100%"
             ]
             []
         ]
@@ -163,36 +160,30 @@ elapsedTimeDiv state durationStr =
 
 buttonDiv : State -> Html Msg
 buttonDiv state =
-    let
-        fullWidth =
-            style "width" "100%"
-    in
-    div []
-        (case state of
-            Stopped ->
-                [ button [ onClick StartTimer, fullWidth ] [ text "START" ] ]
+    case state of
+        Stopped ->
+            button [ onClick StartTimer ] [ text "START" ]
 
-            Running _ _ ->
-                [ button [ onClick StopTimer, fullWidth ] [ text "CANCEL" ] ]
+        Running _ _ ->
+            button [ onClick StopTimer ] [ text "CANCEL" ]
 
-            Reached _ ->
-                [ button [ onClick StopTimer, fullWidth ] [ text "RESET" ] ]
-        )
+        Reached _ ->
+            button [ onClick StopTimer ] [ text "RESET" ]
 
 
 runningSecondsDiv : Model -> Html msg
 runningSecondsDiv model =
-    div []
-        (case model.state of
+    div [ class "timer-elapsed" ]
+        [ case model.state of
             Running (Elapsed e) _ ->
-                [ text <| "Running: " ++ String.fromInt e ++ "ms" ]
+                text <| "Running: " ++ String.fromInt e ++ "ms"
 
             Reached _ ->
-                [ text <| "Completed: " ++ String.fromInt model.duration ++ "ms" ]
+                text <| "Completed: " ++ String.fromInt model.duration ++ "ms"
 
             _ ->
-                [ text "\u{00A0}" ]
-        )
+                text "\u{00A0}"
+        ]
 
 
 view : Model -> Html Msg
@@ -201,13 +192,14 @@ view model =
         durationStr =
             String.fromInt model.duration
     in
-    div [ style "max-width" "350px" ]
-        [ elapsedTimeDiv model.state durationStr
-        , runningSecondsDiv model
-        , buttonDiv model.state
-        , durationDiv durationStr
-
-        -- , p [] [ text (Debug.toString model) ]
+    div [ class "task-container" ]
+        [ h1 [] [ text "Timer" ]
+        , div [ class "card timer" ]
+            [ elapsedTimeDiv model.state durationStr
+            , runningSecondsDiv model
+            , durationDiv durationStr
+            , buttonDiv model.state
+            ]
         ]
 
 

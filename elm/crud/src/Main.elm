@@ -276,44 +276,43 @@ viewPeople people _ form (Filter filter) =
 
         left : Html Msg
         left =
-            H.div []
-                [ H.div []
-                    [ H.label [] [ H.text "Filter prefix:" ]
+            H.div [ A.class "crud-col-left" ]
+                [ H.div [ A.class "crud-field" ]
+                    [ H.label [ A.class "crud-label" ] [ H.text "Filter prefix:" ]
                     , H.input
-                        [ A.id "filter"
+                        [ A.class "crud-input"
                         , A.value filter
                         , A.autocomplete False
                         , E.onInput FilterChanged
                         ]
                         []
                     ]
-                , H.div [ A.class "listbox spacer" ]
-                    [ H.select
-                        [ A.size (List.length people)
-                        , E.onInput SelectedPerson
-                        ]
-                        (List.map personOption (people |> List.filter byFilter))
+                , H.select
+                    [ A.class "crud-listbox"
+                    , A.size (List.length people)
+                    , E.onInput SelectedPerson
                     ]
+                    (List.map personOption (people |> List.filter byFilter))
                 ]
 
         right : Html Msg
         right =
-            H.div
-                [ A.id "new-person" ]
-                [ H.div [ A.class "spacer" ]
-                    [ H.label [] [ H.text "Name:" ]
-                    , H.input [ A.value form.firstName, E.onInput ChangedFirstName ] []
+            H.div [ A.class "crud-col-right" ]
+                [ H.div [ A.class "crud-field" ]
+                    [ H.label [ A.class "crud-label" ] [ H.text "Name:" ]
+                    , H.input [ A.class "crud-input", A.value form.firstName, E.onInput ChangedFirstName ] []
                     ]
-                , H.div []
-                    [ H.label [] [ H.text "Surname:" ]
-                    , H.input [ A.value form.lastName, E.onInput ChangedLastName ] []
+                , H.div [ A.class "crud-field" ]
+                    [ H.label [ A.class "crud-label" ] [ H.text "Surname:" ]
+                    , H.input [ A.class "crud-input", A.value form.lastName, E.onInput ChangedLastName ] []
                     ]
                 ]
     in
-    H.div [ A.class "container" ]
-        [ H.div [ A.id "widget" ]
-            [ H.div [ A.class "lr" ] [ left, right ]
-            , H.div [ A.class "buttons" ]
+    H.div [ A.class "task-container" ]
+        [ H.h1 [] [ H.text "CRUD" ]
+        , H.div [ A.class "card crud" ]
+            [ H.div [ A.class "crud-columns" ] [ left, right ]
+            , H.div [ A.class "crud-buttons" ]
                 [ H.button [ onClickStop ClickedOnCreate ] [ H.text "Create" ]
                 , H.button [ onClickStop ClickedOnUpdate ] [ H.text "Update" ]
                 , H.button [ onClickStop ClickedOnDelete ] [ H.text "Delete" ]
@@ -324,19 +323,15 @@ viewPeople people _ form (Filter filter) =
 
 view : Model -> Html Msg
 view model =
-    H.div []
-        [ case model of
-            Loading ->
-                H.text "Loading..."
+    case model of
+        Loading ->
+            H.text "Loading..."
 
-            Loaded people maybeSelected form filter ->
-                viewPeople people maybeSelected form filter
+        Loaded people maybeSelected form filter ->
+            viewPeople people maybeSelected form filter
 
-            Errored errMsg ->
-                H.text errMsg
-
-        -- , H.pre [] [ H.text (Debug.toString model) ]
-        ]
+        Errored errMsg ->
+            H.text errMsg
 
 
 subscriptions : Model -> Sub Msg

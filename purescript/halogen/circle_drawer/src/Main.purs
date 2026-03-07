@@ -202,56 +202,57 @@ component =
         let
           dist = distFromCenter (circle.x /\ circle.y) (toNumber state.mouseX /\ toNumber state.mouseY)
         in
-          SA.Named $ if dist < circle.r then "#555" else "transparent"
+          SA.Named $ if dist < circle.r then "#666" else "#555"
 
       mkCircle (circleId /\ circle) =
         SE.circle
           [ SA.fill $ circleColor circle
-          , SA.stroke (SA.Named "#888")
+          , SA.stroke (SA.Named "#222")
           , SA.cx circle.x
           , SA.cy circle.y
           , SA.r circle.r
           , onContextMenu $ MouseRightBtnClicked { circleId, circle }
           ]
     in
-      HH.div [ HP.id "container" ]
-        [ HH.h1_ [ HH.text "Circle drawer" ]
-        , HH.p_ [ HH.text "Right click to change the diameter" ]
-        , HH.div [ HP.id "buttons" ]
-            [ HH.button [ HE.onClick $ const UndoBtnClicked ] [ HH.text "Undo" ]
-            , HH.button [ HE.onClick $ const RedoBtnClicked ] [ HH.text "Redo" ]
-            ]
+      HH.div [ HP.classes [ H.ClassName "task-container" ] ]
+        [ HH.h1_ [ HH.text "Circle Drawer" ]
+        , HH.div [ HP.classes [ H.ClassName "card", H.ClassName "circle-drawer" ] ]
+            [ HH.div [ HP.classes [ H.ClassName "circle-drawer-toolbar" ] ]
+                [ HH.button [ HE.onClick $ const UndoBtnClicked ] [ HH.text "Undo" ]
+                , HH.button [ HE.onClick $ const RedoBtnClicked ] [ HH.text "Redo" ]
+                ]
 
-        , SE.svg
-            [ HE.onMouseMove MouseMoved
-            , HE.onClick $ const DrawingAreaClicked
-            , HP.style "background:#1a1a1a"
-            ]
-            (map mkCircle $ Map.toUnfoldable state.history.current)
-
-        , case state.showAdjustDialog of
-            Nothing -> HH.text ""
-            Just ({ circleId, circle }) ->
-              let
-                conv :: Number -> String
-                conv n = Int.fromNumber n <#> Int.toStringAs decimal # fromMaybe "?"
-                coords = "(" <> conv circle.x <> ", " <> conv circle.y <> ")"
-              in
-                HH.div [ HP.id "adjust-dialog", HP.style $ "top:" <> conv circle.y <> "px" ]
-                  [ HH.div_
-                      [ HH.text $ "Adjust diameter of circle at " <> coords <> "."
+            , HH.div [ HP.classes [ H.ClassName "circle-drawer-svg-container" ] ]
+                [ SE.svg
+                    [ SA.classes [ H.ClassName "circle-drawer-svg" ]
+                    , HE.onMouseMove MouseMoved
+                    , HE.onClick $ const DrawingAreaClicked
+                    ]
+                    (map mkCircle $ Map.toUnfoldable state.history.current)
+                , case state.showAdjustDialog of
+                Nothing -> HH.text ""
+                Just ({ circleId, circle }) ->
+                  HH.div
+                      [ HP.classes [ H.ClassName "circle-drawer-popup" ]
+                      , HP.style $ "left:" <> show circle.x <> "px;top:" <> show circle.y <> "px"
                       ]
-                  , HH.input
-                      [ HP.type_ HP.InputRange
-                      , HE.onValueInput $ CircleRadiusChanged { circleId }
-                      , HE.onMouseUp $ const MouseReleased
-                      , HP.min 5.0
-                      , HP.max 100.0
-                      , HP.value
-                          $ Int.toStringAs decimal
-                          $ unsafePartial fromJust
-                          $ Int.fromNumber circle.r
-
+                      [ HH.button [ HP.classes [ H.ClassName "circle-drawer-popup-close" ], HE.onClick $ const MouseReleased ] [ HH.text "✕" ]
+                      , HH.div [ HP.classes [ H.ClassName "circle-drawer-popup-label" ] ]
+                          [ HH.text "Adjust diameter"
+                          ]
+                      , HH.input
+                          [ HP.type_ HP.InputRange
+                          , HP.classes [ H.ClassName "circle-drawer-slider" ]
+                          , HE.onValueInput $ CircleRadiusChanged { circleId }
+                          , HE.onMouseUp $ const MouseReleased
+                          , HP.min 5.0
+                          , HP.max 100.0
+                          , HP.value
+                              $ Int.toStringAs decimal
+                              $ unsafePartial fromJust
+                              $ Int.fromNumber circle.r
+                          ]
                       ]
-                  ]
+                ]
+            ]
         ]

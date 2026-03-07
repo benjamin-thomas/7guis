@@ -82,21 +82,22 @@ component =
               , HE.onValueInput \s -> action s
               , HP.value value
               ]
-          , HH.label
-              [ HP.for id ]
+          , HH.span
+              [ HP.class_ $ HH.ClassName "temp-label" ]
               [ HH.text label ]
           ]
     in
-      HH.div_
+      HH.div [ HP.class_ $ HH.ClassName "task-container" ]
         [ HH.h1_
             [ HH.text "Temperature Converter" ]
-        , HH.div_
+        , HH.div [ HP.class_ $ HH.ClassName "card temp-converter" ]
             [ mkInput { id: "celsius", label: "Celsius" } state.celsius CelsiusChanged
+            , HH.span [ HP.class_ $ HH.ClassName "temp-equals" ] [ HH.text "=" ]
             , mkInput { id: "fahrenheit", label: "Fahrenheit" } state.fahrenheit FahrenheitChanged
             ]
-
-        , HH.p_
-            [ HH.text $ fromMaybe "" state.error ]
+        , case state.error of
+            Nothing -> HH.div [ HP.class_ $ HH.ClassName "error-section error-section--hidden" ] [ HH.text "\x00A0" ]
+            Just msg -> HH.div [ HP.class_ $ HH.ClassName "error-section" ] [ HH.text msg ]
         ]
 
 convert :: String -> (Number -> Number) -> Either P.ParseError Number

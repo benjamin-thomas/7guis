@@ -4,8 +4,8 @@ import Browser
 import Conversions.Celsius as Celsius
 import Conversions.Fahrenheit as Fahrenheit
 import Conversions.Units exposing (Celsius(..), Fahrenheit(..))
-import Html exposing (Html, div, h1, hr, input, label, pre, text)
-import Html.Attributes exposing (style, value)
+import Html exposing (Html, div, h1, hr, input, label, pre, span, text)
+import Html.Attributes exposing (class, value)
 import Html.Events exposing (onInput)
 
 
@@ -85,25 +85,25 @@ update msg model =
 -- VIEW
 
 
-background : String -> Html.Attribute msg
-background klass =
+inputClass : String -> Html.Attribute msg
+inputClass klass =
     if klass == "error" then
-        style "border-color" "#ef4444"
+        class "input input--invalid"
 
     else
-        style "" ""
+        class "input"
 
 
 temperature : String -> (String -> msg) -> Unvalidate String -> Html msg
 temperature txt msg unvalid =
-    div []
-        [ label [ style "margin-right" "10px" ] [ text txt ]
-        , input
+    span []
+        [ input
             [ value unvalid.value
-            , background unvalid.klass
+            , inputClass unvalid.klass
             , onInput msg
             ]
             []
+        , span [ class "temp-label" ] [ text txt ]
         ]
 
 
@@ -116,19 +116,19 @@ view model =
         unvalidFahrenheit =
             unvalidate model.fahrenheit
     in
-    div []
-        [ h1 [] [ text "Temp converter (Elm)" ]
-        , div [ style "display" "flex", style "gap" "30px" ]
+    div [ class "task-container" ]
+        [ h1 [] [ text "Temperature Converter" ]
+        , div [ class "card temp-converter" ]
             [ temperature "Celsius" CelsiusChanged unvalidCelsius
+            , span [ class "temp-equals" ] [ text "=" ]
             , temperature "Fahrenheit" FahrenheitChanged unvalidFahrenheit
             ]
-        , hr [ style "margin" "30px 0" ] []
         , case ( model.celsius, model.fahrenheit ) of
             ( Valid cStr, Valid fStr ) ->
-                div [] [ text <| cStr ++ "C° = " ++ fStr ++ "F°" ]
+                div [ class "error-section error-section--hidden" ] [ text "\u{00A0}" ]
 
             _ ->
-                div [ style "color" "#f87171" ] [ text "Cannot compute due to bad data!" ]
+                div [ class "error-section" ] [ text "Cannot compute due to bad data!" ]
         ]
 
 

@@ -5,6 +5,7 @@ import Prelude
 import Control.Monad.Rec.Class (forever)
 import Data.DateTime.Instant (Instant, diff)
 import Data.Generic.Rep (class Generic)
+import Data.Int (round) as Int
 import Data.Maybe (Maybe(..))
 import Data.Number (fromString)
 import Data.Show.Generic (genericShow)
@@ -111,34 +112,37 @@ component =
   render state =
     let
       (Milliseconds elapsed) = state.elapsed
+      elapsedSec = elapsed / 1000.0
+      tenths = Int.round (elapsedSec * 10.0)
+      whole = tenths / 10
+      frac = mod tenths 10
+      elapsedStr = show whole <> "." <> show frac <> "s"
     in
-      HH.div_
-        [ -- HH.code_ [ HH.text $ show state ]
-          HH.h1_ [ HH.text "Timer" ]
-        , HH.div_
-            [ HH.label_ [ HH.text "Elapsed time:" ]
-            , HH.meter
-                [ HP.min 0.0
-                , HP.max $ 1000.0 * state.duration
-                , HP.value elapsed
-                , HP.style "width: 200px"
+      HH.div [ HP.classes [ H.ClassName "task-container" ] ]
+        [ HH.h1_ [ HH.text "Timer" ]
+        , HH.div [ HP.classes [ H.ClassName "card", H.ClassName "timer" ] ]
+            [ HH.div [ HP.classes [ H.ClassName "timer-row" ] ]
+                [ HH.label [ HP.classes [ H.ClassName "timer-label" ] ] [ HH.text "Elapsed Time:" ]
+                , HH.progress
+                    [ HP.classes [ H.ClassName "timer-progress" ]
+                    , HP.max $ 1000.0 * state.duration
+                    , HP.value elapsed
+                    ]
+                    []
                 ]
-                []
-            , HH.p_ [ HH.text $ show elapsed ]
-            ]
-        , HH.div_
-            [ HH.label_ [ HH.text "Duration:" ]
-            , HH.input
-                [ HP.type_ $ HP.InputRange
-                , HP.min 0.0
-                , HP.max 10.0
-                , HP.value $ show state.duration
-                , HE.onValueInput DurationChanged
-                , HP.style "width: 200px"
+            , HH.div [ HP.classes [ H.ClassName "timer-elapsed" ] ]
+                [ HH.text elapsedStr ]
+            , HH.div [ HP.classes [ H.ClassName "timer-row" ] ]
+                [ HH.label [ HP.classes [ H.ClassName "timer-label" ] ] [ HH.text "Duration:" ]
+                , HH.input
+                    [ HP.type_ $ HP.InputRange
+                    , HP.classes [ H.ClassName "timer-slider" ]
+                    , HP.min 0.0
+                    , HP.max 10.0
+                    , HP.value $ show state.duration
+                    , HE.onValueInput DurationChanged
+                    ]
                 ]
-            , HH.span_ [ HH.text $ show state.duration ]
-
+            , HH.button [ HE.onClick \_ -> Reset ] [ HH.text "Reset" ]
             ]
-
-        , HH.button [ HE.onClick \_ -> Reset ] [ HH.text "Reset" ]
         ]
