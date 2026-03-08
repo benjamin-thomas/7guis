@@ -46,7 +46,7 @@ describe("Timer2 state machine", () => {
 
     // Assert
     t->expect(newModel.timerState)->Expect.toEqual(Stopped)
-    t->expect(effects)->Expect.toEqual([Timer2.StopTimer])
+    t->expect(effects)->Expect.toEqual([Timer2.StopTimer, Timer2.ConsoleLog("Timer stopped")])
   })
 
   test("duration changed: updates durationMs, no effect", t => {
@@ -106,6 +106,6 @@ describe("Timer2 state machine", () => {
 
     // Assert
     t->expect(newModel.timerState)->Expect.toEqual(Running({elapsedMs: 0.0}))
-    t->expect(effects)->Expect.toEqual([Timer2.StartTimer])
+    t->expect(effects)->Expect.toEqual([Timer2.StartTimer, Timer2.ConsoleLog("Timer started")])
   })
 })
