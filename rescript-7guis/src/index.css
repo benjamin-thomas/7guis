@@ -51,6 +51,16 @@ body {
   letter-spacing: 0.05em;
 }
 
+.task-subtitle {
+  display: block;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: normal;
+  text-align: center;
+}
+
 /* Index page styles */
 .index-container {
   display: flex;
@@ -92,6 +102,21 @@ body {
 
 .card--interactive:hover {
   border-color: var(--color-card-border-hover);
+}
+
+.card--interactive {
+  position: relative;
+}
+
+.card-subtitle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 50%;
+  transform: translateY(3.2em);
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
 }
 
 /* Shared task container */

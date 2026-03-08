@@ -109,7 +109,10 @@ let make = () => {
   let elapsedSecondsStr = (cappedElapsedMs / 1000.0)->Float.toFixed(~digits=1)
 
   <div className="task-container">
-    <h1 className="task-title"> {React.string("Timer 2")} </h1>
+    <h1 className="task-title">
+      {React.string("Timer 2")}
+      <span className="task-subtitle"> {React.string("With effects as data")} </span>
+    </h1>
     <div className="card timer">
       <div className="timer-row">
         <label className="timer-label"> {React.string("Elapsed Time:")} </label>

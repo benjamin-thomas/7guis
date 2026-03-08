@@ -68,7 +68,10 @@ let make = () => {
           {React.string("Circle Drawer")}
         </a>
         <a href="#cells" className="card card--interactive"> {React.string("Cells")} </a>
-        <a href="#timer2" className="card card--interactive"> {React.string("Timer 2")} </a>
+        <a href="#timer2" className="card card--interactive">
+          {React.string("Timer 2")}
+          <span className="card-subtitle"> {React.string("With effects as data")} </span>
+        </a>
       </div>
       </div>
     </>

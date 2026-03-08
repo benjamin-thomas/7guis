@@ -1,7 +1,5 @@
 %%raw("import './timeTravelDebugger.css'")
 
-let isDebugEnabled: bool = %raw("import.meta.env.VITE_DEBUG === '1'")
-
 // --- Single-instance store ---
 
 type historyEntry = {
@@ -34,55 +32,49 @@ let subscribe = (listener: unit => unit): (unit => unit) => {
 
 let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>, ~flushCounter: int, ~jumpToModel: JSON.t => unit) => {
   React.useEffect0(() => {
-    if isDebugEnabled {
-      let initJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
-      let data: instanceData = {
-        previousModelJson: initJson,
-        currentModelJson: initJson,
-        history: [
-          {
-            actionStr: "\"@@INIT\"",
-            modelJson: initJson,
-            rawModel: Obj.magic(model),
-          },
-        ],
-        jumpToModel,
-      }
-      instance.contents = Some(data)
-      notifyListeners()
+    let initJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
+    let data: instanceData = {
+      previousModelJson: initJson,
+      currentModelJson: initJson,
+      history: [
+        {
+          actionStr: "\"@@INIT\"",
+          modelJson: initJson,
+          rawModel: Obj.magic(model),
+        },
+      ],
+      jumpToModel,
     }
+    instance.contents = Some(data)
+    notifyListeners()
     Some(() => {
-      if isDebugEnabled {
-        instance.contents = None
-        notifyListeners()
-      }
+      instance.contents = None
+      notifyListeners()
     })
   })
 
   React.useEffect2(() => {
-    if isDebugEnabled {
-      switch instance.contents {
-      | None => ()
-      | Some(data) =>
-        let modelJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
-        data.previousModelJson = data.currentModelJson
-        data.currentModelJson = modelJson
+    switch instance.contents {
+    | None => ()
+    | Some(data) =>
+      let modelJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
+      data.previousModelJson = data.currentModelJson
+      data.currentModelJson = modelJson
 
-        let actions = pendingActionsRef.current
-        if Array.length(actions) > 0 {
-          actions->Array.forEach(actionStr => {
-            let entry: historyEntry = {
-              actionStr,
-              modelJson,
-              rawModel: Obj.magic(model),
-            }
-            data.history = Array.concat(data.history, [entry])
-          })
-          pendingActionsRef.current = []
-        }
-
-        notifyListeners()
+      let actions = pendingActionsRef.current
+      if Array.length(actions) > 0 {
+        actions->Array.forEach(actionStr => {
+          let entry: historyEntry = {
+            actionStr,
+            modelJson,
+            rawModel: Obj.magic(model),
+          }
+          data.history = Array.concat(data.history, [entry])
+        })
+        pendingActionsRef.current = []
       }
+
+      notifyListeners()
     }
     None
   }, (model, flushCounter))
@@ -172,30 +164,27 @@ let computeDiff = (prevJson: string, curJson: string): array<diffEntry> => {
 module Overlay = {
   @react.component
   let make = () => {
-    if !isDebugEnabled {
-      React.null
-    } else {
-      let (_, forceUpdate) = React.useState(() => 0)
+    let (_, forceUpdate) = React.useState(() => 0)
 
-      React.useEffect0(() => {
-        let unsubscribe = subscribe(() => forceUpdate(n => n + 1))
-        Some(unsubscribe)
-      })
+    React.useEffect0(() => {
+      let unsubscribe = subscribe(() => forceUpdate(n => n + 1))
+      Some(unsubscribe)
+    })
 
-      let (collapsed, setCollapsed) = React.useState(() => false)
-      let (filter, setFilter) = React.useState(() => "")
-      let (selectedHistoryNum, setSelectedHistoryNum) = React.useState(() => None)
+    let (collapsed, setCollapsed) = React.useState(() => false)
+    let (filter, setFilter) = React.useState(() => "")
+    let (selectedHistoryNum, setSelectedHistoryNum) = React.useState(() => None)
 
-      let hiddenTags =
-        filter
-        ->String.split(",")
-        ->Array.map(s => s->String.trim->String.toLowerCase)
-        ->Array.filter(s => s !== "")
+    let hiddenTags =
+      filter
+      ->String.split(",")
+      ->Array.map(s => s->String.trim->String.toLowerCase)
+      ->Array.filter(s => s !== "")
 
-      switch instance.contents {
-      | None => React.null
-      | Some(data) =>
-        if collapsed {
+    switch instance.contents {
+    | None => React.null
+    | Some(data) =>
+      if collapsed {
           <button className="debug-toggle" onClick={_ => setCollapsed(_ => false)}>
             {React.string("Debug")}
           </button>
@@ -320,7 +309,6 @@ module Overlay = {
               </div>
             </div>
           </div>
-        }
       }
     }
   }

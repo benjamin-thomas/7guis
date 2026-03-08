@@ -1,5 +1,3 @@
-let isDebugEnabled: bool
-
 let useObserver: (
   ~model: 'model,
   ~pendingActionsRef: React.ref<array<string>>,
