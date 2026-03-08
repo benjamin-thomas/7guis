@@ -1,9 +1,6 @@
-let useObserver: (
-  ~model: 'model,
-  ~pendingActionsRef: React.ref<array<string>>,
-  ~flushCounter: int,
-  ~jumpToModel: JSON.t => unit,
-) => unit
+let useInstance: (~model: 'model, ~jumpToModel: JSON.t => unit) => unit
+let reportAction: string => unit
+let isPaused: unit => bool
 
 module Overlay: {
   @react.component

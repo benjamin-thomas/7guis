@@ -1,30 +1,43 @@
 type debugMsg<'msg> =
-  | AppMsg('msg)
+  | AppMsg('msg, int)
   | DebugSetModel(JSON.t)
 
 let useReducer = (init, update, runEffect) => {
+  let isMounted = React.useRef(true)
+  let mountEpochRef = React.useRef(0)
+  React.useEffect0(() => {
+    mountEpochRef.current = mountEpochRef.current + 1
+    let mountedEpoch = mountEpochRef.current
+    isMounted.current = true
+    Some(() => {
+      if mountEpochRef.current === mountedEpoch {
+        mountEpochRef.current = mountEpochRef.current + 1
+      }
+      isMounted.current = false
+    })
+  })
+
   let wrappedUpdate = (model, msg) => {
     switch msg {
-    | AppMsg(msg) =>
-      let (newModel, effects) = update(model, msg)
-      (newModel, effects->Array.map(e => Some(e)))
+    | AppMsg(msg, msgEpoch) =>
+      if msgEpoch === mountEpochRef.current {
+        let (newModel, effects) = update(model, msg)
+        (newModel, effects->Array.map(e => Some((e, msgEpoch))))
+      } else {
+        (model, [])
+      }
     | DebugSetModel(rawModel) => (Obj.magic(rawModel), [])
     }
   }
 
-  let pendingActionsRef = React.useRef([])
-  let (flushCounter, setFlushCounter) = React.useState(() => 0)
-
   let wrappedRunEffect = (dispatch, wrappedEffect) => {
     switch wrappedEffect {
-    | Some(effect) =>
+    | Some((effect, effectEpoch)) =>
       runEffect(msg => {
-        pendingActionsRef.current = Array.concat(
-          pendingActionsRef.current,
-          [JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?")],
-        )
-        setFlushCounter(n => n + 1)
-        dispatch(AppMsg(msg))
+        if isMounted.current && mountEpochRef.current === effectEpoch && !TimeTravelDebugger.isPaused() {
+          TimeTravelDebugger.reportAction(JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?"))
+          dispatch(AppMsg(msg, effectEpoch))
+        }
       }, effect)
     | None => ()
     }
@@ -34,15 +47,14 @@ let useReducer = (init, update, runEffect) => {
 
   let jumpToModel = rawModel => wrappedDispatch(DebugSetModel(rawModel))
 
-  TimeTravelDebugger.useObserver(~model, ~pendingActionsRef, ~flushCounter, ~jumpToModel)
+  TimeTravelDebugger.useInstance(~model, ~jumpToModel)
 
   let userDispatch = React.useCallback1(msg => {
-    pendingActionsRef.current = Array.concat(
-      pendingActionsRef.current,
-      [JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?")],
-    )
-    setFlushCounter(n => n + 1)
-    wrappedDispatch(AppMsg(msg))
+    if isMounted.current {
+      let epoch = mountEpochRef.current
+      TimeTravelDebugger.reportAction(JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?"))
+      wrappedDispatch(AppMsg(msg, epoch))
+    }
   }, [wrappedDispatch])
 
   (model, userDispatch)

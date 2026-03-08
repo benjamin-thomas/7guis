@@ -122,7 +122,7 @@ let reducer = (state, action) => {
   }
 }
 
-module Debug = {
+module DebugPanel = {
   // VITE_DEBUG=1 npm run dev
   let isEnabled: bool = %raw("import.meta.env.VITE_DEBUG === '1'")
 
@@ -178,12 +178,12 @@ module Debug = {
 
 @react.component
 let make = () => {
-  let (state, dispatch) = React.useReducer(reducer, init)
+  let (state, dispatch) = ReactDebug.useReducer(reducer, init)
 
   <div className="task-container">
     <h1 className="task-title"> {React.string("Circle Drawer")} </h1>
 
-    <Debug state />
+    <DebugPanel state />
 
     <div className="card circle-drawer">
       <div className="circle-drawer-toolbar">

@@ -28,10 +28,35 @@ let subscribe = (listener: unit => unit): (unit => unit) => {
   }
 }
 
-// --- Observer hook (called from Effect.useReducer consumers) ---
+// --- Action buffer (module-level, shared by all consumers) ---
 
-let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>, ~flushCounter: int, ~jumpToModel: JSON.t => unit) => {
+let pendingActions: ref<array<string>> = ref([])
+let actionListeners: ref<array<unit => unit>> = ref([])
+
+let subscribeActions = (listener: unit => unit): (unit => unit) => {
+  actionListeners.contents = Array.concat(actionListeners.contents, [listener])
+  () => {
+    actionListeners.contents = actionListeners.contents->Array.filter(fn => fn !== listener)
+  }
+}
+
+let reportAction = (action: string) => {
+  pendingActions.contents = Array.concat(pendingActions.contents, [action])
+  actionListeners.contents->Array.forEach(fn => fn())
+}
+
+// --- Pause state (module-level, checked by consumers) ---
+
+let paused: ref<bool> = ref(false)
+let isPaused = () => paused.contents
+
+// --- Instance hook (called from consumers) ---
+
+let useInstance = (~model: 'model, ~jumpToModel: JSON.t => unit) => {
+  let (trigger, setTrigger) = React.useState(() => 0)
+
   React.useEffect0(() => {
+    pendingActions.contents = []
     let initJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
     let data: instanceData = {
       previousModelJson: initJson,
@@ -47,8 +72,13 @@ let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>,
     }
     instance.contents = Some(data)
     notifyListeners()
+
+    let unsubscribeActions = subscribeActions(() => setTrigger(n => n + 1))
+
     Some(() => {
       instance.contents = None
+      pendingActions.contents = []
+      unsubscribeActions()
       notifyListeners()
     })
   })
@@ -61,7 +91,7 @@ let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>,
       data.previousModelJson = data.currentModelJson
       data.currentModelJson = modelJson
 
-      let actions = pendingActionsRef.current
+      let actions = pendingActions.contents
       if Array.length(actions) > 0 {
         actions->Array.forEach(actionStr => {
           let entry: historyEntry = {
@@ -71,13 +101,13 @@ let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>,
           }
           data.history = Array.concat(data.history, [entry])
         })
-        pendingActionsRef.current = []
+        pendingActions.contents = []
       }
 
       notifyListeners()
     }
     None
-  }, (model, flushCounter))
+  }, (model, trigger))
 }
 
 // --- Overlay helpers ---
@@ -159,33 +189,126 @@ let computeDiff = (prevJson: string, curJson: string): array<diffEntry> => {
   }
 }
 
+// --- Resize handle ---
+
+@val external addMouseListener: (string, {..} => unit) => unit = "document.addEventListener"
+@val external removeMouseListener: (string, {..} => unit) => unit = "document.removeEventListener"
+
+module ResizeHandle = {
+  @react.component
+  let make = (~onDrag: int => unit) => {
+    let dragging = React.useRef(false)
+    let cleanupRef = React.useRef(() => ())
+
+    React.useEffect0(() => {
+      Some(() => cleanupRef.current())
+    })
+
+    let onMouseDown = React.useCallback1((e: JsxEvent.Mouse.t) => {
+      JsxEvent.Mouse.preventDefault(e)
+      dragging.current = true
+
+      let onMouseMove = (evt: {..}) => {
+        if dragging.current {
+          onDrag(evt["movementY"])
+        }
+      }
+
+      let onMouseUp = ref(_ => ())
+      let cleanup = () => {
+        dragging.current = false
+        removeMouseListener("mousemove", onMouseMove)
+        removeMouseListener("mouseup", onMouseUp.contents)
+        cleanupRef.current = () => ()
+      }
+      onMouseUp.contents = _evt => cleanup()
+      cleanupRef.current = cleanup
+
+      addMouseListener("mousemove", onMouseMove)
+      addMouseListener("mouseup", onMouseUp.contents)
+    }, [onDrag])
+
+    <div className="debug-resize-handle" onMouseDown />
+  }
+}
+
 // --- Overlay component ---
+
+type overlayState = {
+  collapsed: bool,
+  onLeft: bool,
+  modelHeight: int,
+  diffHeight: int,
+  hideFilter: string,
+  collapseFilter: string,
+  selectedHistoryNum: option<int>,
+}
+
+type overlayAction =
+  | Expand
+  | Collapse
+  | ToggleSide
+  | DragModelPanel(int)
+  | DragDiffPanel(int)
+  | SetHideFilter(string)
+  | SetCollapseFilter(string)
+  | SelectHistory(int)
+  | DeselectHistory
+
+let overlayInit = {
+  collapsed: false,
+  onLeft: false,
+  modelHeight: 200,
+  diffHeight: 80,
+  hideFilter: "",
+  collapseFilter: "",
+  selectedHistoryNum: None,
+}
+
+let overlayReducer = (state, action) =>
+  switch action {
+  | Expand => {...state, collapsed: false}
+  | Collapse => {...state, collapsed: true}
+  | ToggleSide => {...state, onLeft: !state.onLeft}
+  | DragModelPanel(dy) => {...state, modelHeight: Math.Int.max(40, state.modelHeight + dy)}
+  | DragDiffPanel(dy) => {...state, diffHeight: Math.Int.max(30, state.diffHeight + dy)}
+  | SetHideFilter(v) => {...state, hideFilter: v}
+  | SetCollapseFilter(v) => {...state, collapseFilter: v}
+  | SelectHistory(num) => {...state, selectedHistoryNum: Some(num)}
+  | DeselectHistory => {...state, selectedHistoryNum: None}
+  }
 
 module Overlay = {
   @react.component
   let make = () => {
     let (_, forceUpdate) = React.useState(() => 0)
+    let (state, dispatch) = React.useReducer(overlayReducer, overlayInit)
 
     React.useEffect0(() => {
-      let unsubscribe = subscribe(() => forceUpdate(n => n + 1))
+      let unsubscribe = subscribe(() => {
+        if !paused.contents {
+          forceUpdate(n => n + 1)
+        }
+      })
       Some(unsubscribe)
     })
 
-    let (collapsed, setCollapsed) = React.useState(() => false)
-    let (filter, setFilter) = React.useState(() => "")
-    let (selectedHistoryNum, setSelectedHistoryNum) = React.useState(() => None)
-
-    let hiddenTags =
-      filter
+    let parseTags = str =>
+      str
       ->String.split(",")
       ->Array.map(s => s->String.trim->String.toLowerCase)
       ->Array.filter(s => s !== "")
 
+    let hiddenTags = parseTags(state.hideFilter)
+    let collapseTags = parseTags(state.collapseFilter)
+
     switch instance.contents {
     | None => React.null
     | Some(data) =>
-      if collapsed {
-          <button className="debug-toggle" onClick={_ => setCollapsed(_ => false)}>
+      if state.collapsed {
+          <button
+            className={"debug-toggle" ++ (state.onLeft ? " debug-toggle--left" : "")}
+            onClick={_ => dispatch(Expand)}>
             {React.string("Debug")}
           </button>
         } else {
@@ -197,7 +320,40 @@ module Overlay = {
               !(hiddenTags->Array.some(h => tag === h))
             })
 
-          let (diffs, diffLabel) = switch selectedHistoryNum {
+          // Collapse consecutive runs of the same tag
+          let displayHistory = {
+            let shouldCollapse = tag =>
+              collapseTags->Array.some(c => c === tag->String.toLowerCase)
+
+            filteredHistory->Array.reduce([], (acc, (entry, num)) => {
+              let tag = actionTag(entry.actionStr)
+              switch acc->Array.at(-1) {
+              | Some((_prevEntry, _prevNum, count, prevTag))
+                if prevTag === tag && shouldCollapse(tag) =>
+                // Replace the last element with updated entry/count
+                let len = Array.length(acc)
+                let _ = acc->Array.splice(~start=len - 1, ~remove=1, ~insert=[(entry, num, count + 1, tag)])
+                acc
+              | _ =>
+                let _ = acc->Array.push((entry, num, 1, tag))
+                acc
+              }
+            })
+          }
+
+          let isActionHidden = (entry: historyEntry) => {
+            let tag = actionTag(entry.actionStr)->String.toLowerCase
+            hiddenTags->Array.some(h => tag === h)
+          }
+
+          let diffHidden = switch state.selectedHistoryNum {
+          | Some(num) =>
+            data.history->Array.get(num - 1)->Option.map(isActionHidden)->Option.getOr(false)
+          | None =>
+            data.history->Array.at(-1)->Option.map(isActionHidden)->Option.getOr(false)
+          }
+
+          let (diffs, diffLabel) = switch state.selectedHistoryNum {
           | Some(num) =>
             let prevJson =
               data.history
@@ -216,21 +372,53 @@ module Overlay = {
             )
           }
 
-          <div className="debug-overlay">
+          <>
+          {if paused.contents {
+            <div className="debug-app-lock" />
+          } else {
+            React.null
+          }}
+          <div className={"debug-overlay" ++ (state.onLeft ? " debug-overlay--left" : "")}>
             <div className="debug-header">
               <span className="debug-title"> {React.string("Time Travel Debugger")} </span>
-              <button className="debug-close" onClick={_ => setCollapsed(_ => true)}>
-                {React.string("_")}
-              </button>
+              <span className="debug-header-buttons">
+                <button
+                  className={"debug-header-btn" ++ (paused.contents ? " debug-header-btn--active" : "")}
+                  onClick={_ => {
+                    paused.contents = !paused.contents
+                    forceUpdate(n => n + 1)
+                  }}>
+                  {React.string(paused.contents ? "Play" : "Pause")}
+                </button>
+                <button
+                  className="debug-header-btn"
+                  onClick={_ => dispatch(ToggleSide)}>
+                  {React.string(state.onLeft ? "Right" : "Left")}
+                </button>
+                <button
+                  className="debug-header-btn"
+                  onClick={_ => dispatch(Collapse)}>
+                  {React.string("Min")}
+                </button>
+              </span>
             </div>
             <div className="debug-body">
-              <div className="debug-section">
+              <div
+                className="debug-section debug-section--panel"
+                style={height: Int.toString(state.modelHeight) ++ "px"}>
                 <div className="debug-section-title"> {React.string("Current Model")} </div>
                 <pre className="debug-model"> {React.string(data.currentModelJson)} </pre>
               </div>
-              {if Array.length(diffs) > 0 {
-                <div className="debug-section">
-                  <div className="debug-section-title"> {React.string(diffLabel)} </div>
+              <ResizeHandle
+                onDrag={dy => dispatch(DragModelPanel(dy))}
+              />
+              <div
+                className="debug-section debug-section--panel"
+                style={height: Int.toString(state.diffHeight) ++ "px"}>
+                <div className="debug-section-title"> {React.string(diffLabel)} </div>
+                {if diffHidden {
+                  <div className="debug-diff-hidden"> {React.string("Hidden")} </div>
+                } else {
                   <div className="debug-diff">
                     {React.array(
                       diffs->Array.mapWithIndex((d, idx) => {
@@ -243,16 +431,17 @@ module Overlay = {
                       }),
                     )}
                   </div>
-                </div>
-              } else {
-                React.null
-              }}
+                }}
+              </div>
+              <ResizeHandle
+                onDrag={dy => dispatch(DragDiffPanel(dy))}
+              />
               <div className="debug-section debug-section--history">
                 <div className="debug-section-header">
                   <div className="debug-section-title">
                     {React.string(
                       "History (" ++
-                      Int.toString(Array.length(filteredHistory)) ++
+                      Int.toString(Array.length(displayHistory)) ++
                       "/" ++
                       Int.toString(Array.length(indexedHistory)) ++
                       ")",
@@ -262,27 +451,110 @@ module Overlay = {
                     className="debug-jump-btn"
                     onClick={_ => {
                       data.history = []
+                      paused.contents = false
                       notifyListeners()
                     }}>
                     {React.string("Clear")}
                   </button>
                 </div>
-                <input
-                  className="debug-filter"
-                  type_="text"
-                  placeholder="Hide: Ticked, DurationChanged, ..."
-                  value={filter}
-                  onChange={e => {
-                    let v = ReactEvent.Form.target(e)["value"]
-                    setFilter(_ => v)
-                  }}
-                />
+                {
+                  let allTags = {
+                    let seen = Dict.make()
+                    data.history->Array.filterMap(entry => {
+                      let tag = actionTag(entry.actionStr)
+                      if Dict.get(seen, tag)->Option.isSome {
+                        None
+                      } else {
+                        Dict.set(seen, tag, true)
+                        Some(tag)
+                      }
+                    })
+                  }
+
+                  let renderFilterInput = (~label, ~value, ~onSetValue, ~excludeTags) => {
+                    let currentInput = {
+                      let parts = value->String.split(",")
+                      parts->Array.at(-1)->Option.getOr("")->String.trim->String.toLowerCase
+                    }
+
+                    let suggestions =
+                      allTags->Array.filter(tag => {
+                        let lower = tag->String.toLowerCase
+                        let alreadyUsed = excludeTags->Array.some(h => h === lower)
+                        !alreadyUsed && currentInput !== "" && lower->String.startsWith(currentInput)
+                      })
+
+                    let completeWith = tag => {
+                      let parts = value->String.split(",")
+                      let _ = parts->Array.pop
+                      let prefix = if Array.length(parts) > 0 {
+                        parts->Array.join(", ") ++ ", "
+                      } else {
+                        ""
+                      }
+                      onSetValue(prefix ++ tag)
+                    }
+
+                    <>
+                      <input
+                        className="debug-filter"
+                        type_="text"
+                        placeholder={label ++ ": action names, ..."}
+                        value
+                        onChange={e => {
+                          let v = ReactEvent.Form.target(e)["value"]
+                          onSetValue(v)
+                        }}
+                        onKeyDown={e => {
+                          if ReactEvent.Keyboard.key(e) === "Tab" && Array.length(suggestions) > 0 {
+                            ReactEvent.Keyboard.preventDefault(e)
+                            switch suggestions->Array.get(0) {
+                            | Some(tag) => completeWith(tag)
+                            | None => ()
+                            }
+                          }
+                        }}
+                      />
+                      {if Array.length(suggestions) > 0 {
+                        <div className="debug-suggestions">
+                          {React.array(
+                            suggestions->Array.mapWithIndex((tag, idx) => {
+                              <button
+                                key={Int.toString(idx)}
+                                className="debug-suggestion"
+                                onClick={_ => completeWith(tag)}>
+                                {React.string(tag)}
+                              </button>
+                            }),
+                          )}
+                        </div>
+                      } else {
+                        React.null
+                      }}
+                    </>
+                  }
+
+                  <>
+                    {renderFilterInput(
+                      ~label="Hide",
+                      ~value=state.hideFilter,
+                      ~onSetValue=v => dispatch(SetHideFilter(v)),
+                      ~excludeTags=hiddenTags,
+                    )}
+                    {renderFilterInput(
+                      ~label="Collapse",
+                      ~value=state.collapseFilter,
+                      ~onSetValue=v => dispatch(SetCollapseFilter(v)),
+                      ~excludeTags=collapseTags,
+                    )}
+                  </>
+                }
                 <div className="debug-history">
                   {React.array(
-                    filteredHistory
+                    displayHistory
                     ->Array.toReversed
-                    ->Array.mapWithIndex(((entry, num), idx) => {
-                      let isSelected = selectedHistoryNum == Some(num)
+                    ->Array.mapWithIndex(((entry, num, count, _tag), idx) => {
+                      let isSelected = state.selectedHistoryNum == Some(num)
                       <div
                         key={Int.toString(idx)}
                         className={isSelected
@@ -290,9 +562,11 @@ module Overlay = {
                           : "debug-history-entry"}
                         onClick={_ => {
                           if isSelected {
-                            setSelectedHistoryNum(_ => None)
+                            paused.contents = false
+                            dispatch(DeselectHistory)
                           } else {
-                            setSelectedHistoryNum(_ => Some(num))
+                            paused.contents = true
+                            dispatch(SelectHistory(num))
                           }
                           data.jumpToModel(entry.rawModel)
                         }}>
@@ -302,6 +576,13 @@ module Overlay = {
                         <span className="debug-action-name">
                           {React.string(actionTag(entry.actionStr))}
                         </span>
+                        {if count > 1 {
+                          <span className="debug-entry-count">
+                            {React.string("(x" ++ Int.toString(count) ++ ")")}
+                          </span>
+                        } else {
+                          React.null
+                        }}
                       </div>
                     }),
                   )}
@@ -309,6 +590,7 @@ module Overlay = {
               </div>
             </div>
           </div>
+          </>
       }
     }
   }
