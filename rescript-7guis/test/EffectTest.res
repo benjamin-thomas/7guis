@@ -47,11 +47,11 @@ describe("Effect.useReducer in React Strict Mode", () => {
     //
     // If our `Effect.useReducer` implementation mutates a ref inside the reducer function,
     // the single effect in this test ("LogIncrement") will be pushed to the queue TWICE.
-    // While logging twice is annoying, the actual danger in our app (e.g. `Timer2.res`) 
-    // is that effects that create references (like `setInterval`) will be run twice, 
-    // but the component will only track the ID of the second interval, losing the first 
+    // While logging twice is annoying, the actual danger in our app (e.g. `Timer2.res`)
+    // is that effects that create references (like `setInterval`) will be run twice,
+    // but the component will only track the ID of the second interval, losing the first
     // ID and creating an uncontrolled memory leak.
-    
+
     // Arrange
     let result = render(
       <React.StrictMode>

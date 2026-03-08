@@ -25,6 +25,7 @@ type effect =
   | StopTimer
   | NotifyServer(float)
   | DismissNotificationAfter(int)
+  | ConsoleLog(string)
 
 let init: model = {
   timerState: Stopped,
@@ -47,8 +48,11 @@ let update = (model, msg) => {
     | Stopped => (model, [])
     }
   | DurationChanged(ms) => ({...model, durationMs: ms}, [])
-  | StartBtnClicked => ({...model, timerState: Running({elapsedMs: 0.0})}, [StartTimer])
-  | StopBtnClicked => ({...model, timerState: Stopped}, [StopTimer])
+  | StartBtnClicked => (
+      {...model, timerState: Running({elapsedMs: 0.0})},
+      [StartTimer, ConsoleLog("Timer started")],
+    )
+  | StopBtnClicked => ({...model, timerState: Stopped}, [StopTimer, ConsoleLog("Timer stopped")])
   | GotServerNotification(Ok()) => (
       {...model, serverStatus: Saved},
       [DismissNotificationAfter(1000)],
@@ -90,6 +94,7 @@ let make = () => {
       })
       ->ignore
     | DismissNotificationAfter(ms) => setTimeout(() => dispatch(DismissNotification), ms)->ignore
+    | ConsoleLog(msg) => Console.log2("[Timer2]", msg)
     }
 
   let (model, dispatch) = Effect.useReducer(init, update, runEffect)

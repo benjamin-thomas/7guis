@@ -23,6 +23,7 @@ type effect =
   | StopTimer
   | NotifyServer(float)
   | DismissNotificationAfter(int)
+  | ConsoleLog(string)
 
 let update: (model, msg) => (model, array<effect>)
 
