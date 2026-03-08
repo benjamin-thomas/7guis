@@ -1,22 +1,30 @@
-let useReducer = (init, update, runEffect) => {
-  let effectsRef = React.useRef([])
-  let (effectCount, setEffectCount) = React.useState(() => 0)
+type state<'model, 'effect> = {
+  model: 'model,
+  effectsQueue: array<'effect>,
+}
 
-  let (model, dispatch) = React.useReducer((model, msg) => {
-    let (newModel, effects) = update(model, msg)
-    if effects->Array.length > 0 {
-      effectsRef.current = Array.concat(effectsRef.current, effects)
-      setEffectCount(n => n + 1)
+let useReducer = (init, update, runEffect) => {
+  let (state, dispatch) = React.useReducer((state, msg) => {
+    let (newModel, effects) = update(state.model, msg)
+    {
+      model: newModel,
+      effectsQueue: Array.concat(state.effectsQueue, effects),
     }
-    newModel
-  }, init)
+  }, {model: init, effectsQueue: []})
+
+  let effectsRunCount = React.useRef(0)
 
   React.useEffect1(() => {
-    let effects = effectsRef.current
-    effectsRef.current = []
-    effects->Array.forEach(effect => runEffect(dispatch, effect))
+    let queueLength = state.effectsQueue->Array.length
+    if queueLength > effectsRunCount.current {
+      let newEffects =
+        state.effectsQueue->Array.slice(~start=effectsRunCount.current, ~end=queueLength)
+      
+      effectsRunCount.current = queueLength
+      newEffects->Array.forEach(effect => runEffect(dispatch, effect))
+    }
     None
-  }, [effectCount])
+  }, [state.effectsQueue])
 
-  (model, dispatch)
+  (state.model, dispatch)
 }
