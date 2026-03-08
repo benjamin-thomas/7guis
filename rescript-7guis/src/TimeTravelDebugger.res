@@ -2,9 +2,7 @@
 
 let isDebugEnabled: bool = %raw("import.meta.env.VITE_DEBUG === '1'")
 
-// --- Registry infrastructure ---
-
-let nextInstanceId: ref<int> = ref(0)
+// --- Single-instance store ---
 
 type historyEntry = {
   actionStr: string,
@@ -13,14 +11,13 @@ type historyEntry = {
 }
 
 type instanceData = {
-  id: int,
   mutable previousModelJson: string,
   mutable currentModelJson: string,
   mutable history: array<historyEntry>,
   jumpToModel: JSON.t => unit,
 }
 
-let registry: ref<Dict.t<instanceData>> = ref(Dict.make())
+let instance: ref<option<instanceData>> = ref(None)
 let listeners: ref<array<unit => unit>> = ref([])
 
 let notifyListeners = () =>
@@ -33,44 +30,13 @@ let subscribe = (listener: unit => unit): (unit => unit) => {
   }
 }
 
-let getSnapshot = (): Dict.t<instanceData> =>
-  registry.contents
-
-let registerInstance = (data: instanceData): unit => {
-  let newDict = Dict.fromArray(
-    Array.concat(Dict.toArray(registry.contents), [(Int.toString(data.id), data)]),
-  )
-  registry.contents = newDict
-  notifyListeners()
-}
-
-let unregisterInstance = (id: int): unit => {
-  let newDict = Dict.make()
-  registry.contents
-  ->Dict.toArray
-  ->Array.forEach(((key, value)) => {
-    if key !== Int.toString(id) {
-      Dict.set(newDict, key, value)
-    }
-  })
-  registry.contents = newDict
-  notifyListeners()
-}
-
 // --- Observer hook (called from Effect.useReducer consumers) ---
 
 let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>, ~flushCounter: int, ~jumpToModel: JSON.t => unit) => {
-  let instanceId = React.useMemo0(() => {
-    let id = nextInstanceId.contents
-    nextInstanceId.contents = nextInstanceId.contents + 1
-    id
-  })
-
   React.useEffect0(() => {
     if isDebugEnabled {
       let initJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
       let data: instanceData = {
-        id: instanceId,
         previousModelJson: initJson,
         currentModelJson: initJson,
         history: [
@@ -82,19 +48,20 @@ let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>,
         ],
         jumpToModel,
       }
-      registerInstance(data)
+      instance.contents = Some(data)
+      notifyListeners()
     }
     Some(() => {
       if isDebugEnabled {
-        unregisterInstance(instanceId)
+        instance.contents = None
+        notifyListeners()
       }
     })
   })
 
   React.useEffect2(() => {
     if isDebugEnabled {
-      let key = Int.toString(instanceId)
-      switch Dict.get(registry.contents, key) {
+      switch instance.contents {
       | None => ()
       | Some(data) =>
         let modelJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
@@ -215,28 +182,9 @@ module Overlay = {
         Some(unsubscribe)
       })
 
-      let snapshot = getSnapshot()
-
-      let (selectedId, setSelectedId) = React.useState(() => None)
       let (collapsed, setCollapsed) = React.useState(() => false)
       let (filter, setFilter) = React.useState(() => "")
       let (selectedHistoryNum, setSelectedHistoryNum) = React.useState(() => None)
-
-      let instances = Dict.toArray(snapshot)
-
-      React.useEffect1(() => {
-        let needsReselect = switch selectedId {
-        | None => true
-        | Some(id) => Dict.get(snapshot, id)->Option.isNone
-        }
-        if needsReselect {
-          switch instances->Array.at(0) {
-          | Some((key, _)) => setSelectedId(_ => Some(key))
-          | None => setSelectedId(_ => None)
-          }
-        }
-        None
-      }, [instances])
 
       let hiddenTags =
         filter
@@ -244,66 +192,48 @@ module Overlay = {
         ->Array.map(s => s->String.trim->String.toLowerCase)
         ->Array.filter(s => s !== "")
 
-      if collapsed {
-        <button className="debug-toggle" onClick={_ => setCollapsed(_ => false)}>
-          {React.string("Debug")}
-        </button>
-      } else {
-        <div className="debug-overlay">
-          <div className="debug-header">
-            <span className="debug-title"> {React.string("Time Travel Debugger")} </span>
-            <button className="debug-close" onClick={_ => setCollapsed(_ => true)}>
-              {React.string("_")}
-            </button>
-          </div>
-          {if Array.length(instances) > 1 {
-            <div className="debug-tabs">
-              {React.array(
-                instances->Array.map(((key, data)) => {
-                  let isActive = selectedId == Some(key)
-                  <button
-                    key
-                    className={isActive ? "debug-tab debug-tab--active" : "debug-tab"}
-                    onClick={_ => setSelectedId(_ => Some(key))}>
-                    {React.string("Instance " ++ Int.toString(data.id))}
-                  </button>
-                }),
-              )}
+      switch instance.contents {
+      | None => React.null
+      | Some(data) =>
+        if collapsed {
+          <button className="debug-toggle" onClick={_ => setCollapsed(_ => false)}>
+            {React.string("Debug")}
+          </button>
+        } else {
+          let indexedHistory =
+            data.history->Array.mapWithIndex((entry, idx) => (entry, idx + 1))
+          let filteredHistory =
+            indexedHistory->Array.filter(((entry, _)) => {
+              let tag = actionTag(entry.actionStr)->String.toLowerCase
+              !(hiddenTags->Array.some(h => tag === h))
+            })
+
+          let (diffs, diffLabel) = switch selectedHistoryNum {
+          | Some(num) =>
+            let prevJson =
+              data.history
+              ->Array.get(num - 2)
+              ->Option.map(e => e.modelJson)
+              ->Option.getOr("{}")
+            let curJson =
+              data.history
+              ->Array.get(num - 1)
+              ->Option.map(e => e.modelJson)
+              ->Option.getOr("{}")
+            (computeDiff(prevJson, curJson), "Diff (step " ++ Int.toString(num) ++ ")")
+          | None => (
+              computeDiff(data.previousModelJson, data.currentModelJson),
+              "Diff (live)",
+            )
+          }
+
+          <div className="debug-overlay">
+            <div className="debug-header">
+              <span className="debug-title"> {React.string("Time Travel Debugger")} </span>
+              <button className="debug-close" onClick={_ => setCollapsed(_ => true)}>
+                {React.string("_")}
+              </button>
             </div>
-          } else {
-            React.null
-          }}
-          {switch selectedId->Option.flatMap(id => Dict.get(snapshot, id)) {
-          | None =>
-            <div className="debug-body"> {React.string("No instances registered")} </div>
-          | Some(data) =>
-            let indexedHistory =
-              data.history->Array.mapWithIndex((entry, idx) => (entry, idx + 1))
-            let filteredHistory =
-              indexedHistory->Array.filter(((entry, _)) => {
-                let tag = actionTag(entry.actionStr)->String.toLowerCase
-                !(hiddenTags->Array.some(h => tag === h))
-              })
-
-            let (diffs, diffLabel) = switch selectedHistoryNum {
-            | Some(num) =>
-              let prevJson =
-                data.history
-                ->Array.get(num - 2)
-                ->Option.map(e => e.modelJson)
-                ->Option.getOr("{}")
-              let curJson =
-                data.history
-                ->Array.get(num - 1)
-                ->Option.map(e => e.modelJson)
-                ->Option.getOr("{}")
-              (computeDiff(prevJson, curJson), "Diff (step " ++ Int.toString(num) ++ ")")
-            | None => (
-                computeDiff(data.previousModelJson, data.currentModelJson),
-                "Diff (live)",
-              )
-            }
-
             <div className="debug-body">
               <div className="debug-section">
                 <div className="debug-section-title"> {React.string("Current Model")} </div>
@@ -389,8 +319,8 @@ module Overlay = {
                 </div>
               </div>
             </div>
-          }}
-        </div>
+          </div>
+        }
       }
     }
   }
