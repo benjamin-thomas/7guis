@@ -5,6 +5,7 @@ switch ReactDOM.querySelector("#root") {
   ReactDOM.Client.createRoot(domElement)->ReactDOM.Client.Root.render(
     <React.StrictMode>
       <App />
+      <TimeTravelDebugger.Overlay />
     </React.StrictMode>,
   )
 | None => ()

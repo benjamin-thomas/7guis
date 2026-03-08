@@ -21,7 +21,7 @@ describe("FlightBooker", () => {
       async t => {
         // Arrange
         let user = UserEvent.setup()
-        render(<FlightBooker />)
+        render(<FlightBooker />)->ignore
         await setReturnFlight(user)
 
         // Act
@@ -42,7 +42,7 @@ describe("FlightBooker", () => {
       async t => {
         // Arrange
         let user = UserEvent.setup()
-        render(<FlightBooker />)
+        render(<FlightBooker />)->ignore
         await setReturnFlight(user)
 
         // Act

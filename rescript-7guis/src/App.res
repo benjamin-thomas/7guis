@@ -7,6 +7,7 @@ type route =
   | Crud
   | CircleDrawer
   | Cells
+  | Timer2
 
 module Window = {
   @val external addEventListener: (string, unit => unit) => unit = "addEventListener"
@@ -25,6 +26,7 @@ let hashToRoute = hash => {
   | "#crud" => Crud
   | "#circle-drawer" => CircleDrawer
   | "#cells" => Cells
+  | "#timer2" => Timer2
   | _ => Index
   }
 }
@@ -66,6 +68,10 @@ let make = () => {
           {React.string("Circle Drawer")}
         </a>
         <a href="#cells" className="card card--interactive"> {React.string("Cells")} </a>
+        <a href="#timer2" className="card card--interactive">
+          {React.string("Timer 2")}
+          <span className="card-subtitle"> {React.string("With effects as data")} </span>
+        </a>
       </div>
       </div>
     </>
@@ -76,5 +82,6 @@ let make = () => {
   | Crud => withBackLink(<Crud />)
   | CircleDrawer => withBackLink(<CircleDrawer />)
   | Cells => withBackLink(<Cells />)
+  | Timer2 => withBackLink(<Timer2 />)
   }
 }
