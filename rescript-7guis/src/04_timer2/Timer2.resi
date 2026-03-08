@@ -25,6 +25,8 @@ type effect =
   | DismissNotificationAfter(int)
   | ConsoleLog(string)
 
+let init: model
+
 let update: (model, msg) => (model, array<effect>)
 
 @react.component

@@ -108,4 +108,40 @@ describe("Timer2 state machine", () => {
     t->expect(newModel.timerState)->Expect.toEqual(Running({elapsedMs: 0.0}))
     t->expect(effects)->Expect.toEqual([Timer2.StartTimer, Timer2.ConsoleLog("Timer started")])
   })
+
+  test("full start-tick-stop sequence", t => {
+    let (finalModel, allEffects) =
+      [Timer2.StartBtnClicked, Ticked(100.0), Ticked(100.0), StopBtnClicked]
+      ->Array.reduce((Timer2.init, []), ((model, effects), msg) => {
+        let (newModel, newEffects) = Timer2.update(model, msg)
+        (newModel, Array.concat(effects, newEffects))
+      })
+
+    t->expect(finalModel.timerState)->Expect.toEqual(Stopped)
+    t->expect(allEffects)->Expect.toEqual([
+      Timer2.StartTimer,
+      ConsoleLog("Timer started"),
+      StopTimer,
+      ConsoleLog("Timer stopped"),
+    ])
+  })
+
+  test("timer auto-stops and notifies server when duration reached", t => {
+    let model = {...Timer2.init, durationMs: 300}
+
+    let (finalModel, allEffects) =
+      [Timer2.StartBtnClicked, Ticked(100.0), Ticked(100.0), Ticked(200.0)]
+      ->Array.reduce((model, []), ((model, effects), msg) => {
+        let (newModel, newEffects) = Timer2.update(model, msg)
+        (newModel, Array.concat(effects, newEffects))
+      })
+
+    t->expect(finalModel.timerState)->Expect.toEqual(Stopped)
+    t->expect(allEffects)->Expect.toEqual([
+      Timer2.StartTimer,
+      ConsoleLog("Timer started"),
+      StopTimer,
+      NotifyServer(400.0),
+    ])
+  })
 })
