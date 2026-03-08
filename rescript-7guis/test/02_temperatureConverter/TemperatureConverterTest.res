@@ -4,7 +4,7 @@ describe("TemperatureConverter", () => {
   afterEach(() => TestingLibrary.cleanup())
 
   testAsync("converts Celsius to Fahrenheit", async _t => {
-    TestingLibrary.render(<TemperatureConverter />)
+    TestingLibrary.render(<TemperatureConverter />)->ignore
 
     let user = UserEvent.setup()
     let celsius = TestingLibrary.screen.getByLabelText("Celsius")
@@ -19,7 +19,7 @@ describe("TemperatureConverter", () => {
   })
 
   testAsync("converts Fahrenheit to Celsius", async _t => {
-    TestingLibrary.render(<TemperatureConverter />)
+    TestingLibrary.render(<TemperatureConverter />)->ignore
 
     let user = UserEvent.setup()
     let fahrenheit = TestingLibrary.screen.getByLabelText("Fahrenheit")
@@ -29,7 +29,7 @@ describe("TemperatureConverter", () => {
   })
 
   testAsync("clearing one field clears the other", async t => {
-    TestingLibrary.render(<TemperatureConverter />)
+    TestingLibrary.render(<TemperatureConverter />)->ignore
 
     let user = UserEvent.setup()
     let celsius = TestingLibrary.screen.getByLabelText("Celsius")
@@ -44,7 +44,7 @@ describe("TemperatureConverter", () => {
   })
 
   testAsync("shows an error for invalid input", async _t => {
-    TestingLibrary.render(<TemperatureConverter />)
+    TestingLibrary.render(<TemperatureConverter />)->ignore
 
     let user = UserEvent.setup()
     let celsius = TestingLibrary.screen.getByLabelText("Celsius")
