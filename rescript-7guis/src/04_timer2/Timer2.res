@@ -97,7 +97,7 @@ let make = () => {
     | ConsoleLog(msg) => Console.log2("[Timer2]", msg)
     }
 
-  let (model, dispatch) = Effect.useReducer(init, update, runEffect)
+  let (model, dispatch) = EffectDebug.useReducer(init, update, runEffect)
 
   let elapsedMs = switch model.timerState {
   | Running({elapsedMs}) => elapsedMs
