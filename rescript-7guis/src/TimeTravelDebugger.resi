@@ -2,7 +2,8 @@ let isDebugEnabled: bool
 
 let useObserver: (
   ~model: 'model,
-  ~pendingActionRef: React.ref<option<string>>,
+  ~pendingActionsRef: React.ref<array<string>>,
+  ~flushCounter: int,
   ~jumpToModel: JSON.t => unit,
 ) => unit
 

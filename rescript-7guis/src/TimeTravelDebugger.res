@@ -59,7 +59,7 @@ let unregisterInstance = (id: int): unit => {
 
 // --- Observer hook (called from Effect.useReducer consumers) ---
 
-let useObserver = (~model: 'model, ~pendingActionRef: React.ref<option<string>>, ~jumpToModel: JSON.t => unit) => {
+let useObserver = (~model: 'model, ~pendingActionsRef: React.ref<array<string>>, ~flushCounter: int, ~jumpToModel: JSON.t => unit) => {
   let instanceId = React.useMemo0(() => {
     let id = nextInstanceId.contents
     nextInstanceId.contents = nextInstanceId.contents + 1
@@ -67,43 +67,58 @@ let useObserver = (~model: 'model, ~pendingActionRef: React.ref<option<string>>,
   })
 
   React.useEffect0(() => {
-    let initJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
-    let data: instanceData = {
-      id: instanceId,
-      previousModelJson: initJson,
-      currentModelJson: initJson,
-      history: [],
-      jumpToModel,
+    if isDebugEnabled {
+      let initJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
+      let data: instanceData = {
+        id: instanceId,
+        previousModelJson: initJson,
+        currentModelJson: initJson,
+        history: [
+          {
+            actionStr: "\"@@INIT\"",
+            modelJson: initJson,
+            rawModel: Obj.magic(model),
+          },
+        ],
+        jumpToModel,
+      }
+      registerInstance(data)
     }
-    registerInstance(data)
-    Some(() => unregisterInstance(instanceId))
+    Some(() => {
+      if isDebugEnabled {
+        unregisterInstance(instanceId)
+      }
+    })
   })
 
-  React.useEffect1(() => {
-    let key = Int.toString(instanceId)
-    switch Dict.get(registry.contents, key) {
-    | None => ()
-    | Some(data) =>
-      let modelJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
-      data.previousModelJson = data.currentModelJson
-      data.currentModelJson = modelJson
-
-      switch pendingActionRef.current {
-      | Some(actionStr) =>
-        let entry: historyEntry = {
-          actionStr,
-          modelJson,
-          rawModel: Obj.magic(model),
-        }
-        data.history = Array.concat(data.history, [entry])
-        pendingActionRef.current = None
+  React.useEffect2(() => {
+    if isDebugEnabled {
+      let key = Int.toString(instanceId)
+      switch Dict.get(registry.contents, key) {
       | None => ()
-      }
+      | Some(data) =>
+        let modelJson = JSON.stringifyAny(Obj.magic(model), ~space=2)->Option.getOr("{}")
+        data.previousModelJson = data.currentModelJson
+        data.currentModelJson = modelJson
 
-      notifyListeners()
+        let actions = pendingActionsRef.current
+        if Array.length(actions) > 0 {
+          actions->Array.forEach(actionStr => {
+            let entry: historyEntry = {
+              actionStr,
+              modelJson,
+              rawModel: Obj.magic(model),
+            }
+            data.history = Array.concat(data.history, [entry])
+          })
+          pendingActionsRef.current = []
+        }
+
+        notifyListeners()
+      }
     }
     None
-  }, [model])
+  }, (model, flushCounter))
 }
 
 // --- Overlay helpers ---
@@ -153,6 +168,21 @@ let rec jsonDiff = (~path="", old: JSON.t, cur: JSON.t): array<diffEntry> => {
       }
     })
     ->Array.flat
+  | (JSON.Array(oldArr), JSON.Array(curArr)) =>
+    let maxLen = Math.Int.max(Array.length(oldArr), Array.length(curArr))
+    Array.fromInitializer(~length=maxLen, i => i)
+    ->Array.flatMap(i => {
+      let subPath =
+        path === ""
+          ? "[" ++ Int.toString(i) ++ "]"
+          : path ++ "[" ++ Int.toString(i) ++ "]"
+      switch (oldArr->Array.get(i), curArr->Array.get(i)) {
+      | (Some(a), Some(b)) => jsonDiff(~path=subPath, a, b)
+      | (Some(a), None) => [{path: subPath, oldVal: JSON.stringify(a), newVal: "(removed)"}]
+      | (None, Some(b)) => [{path: subPath, oldVal: "(added)", newVal: JSON.stringify(b)}]
+      | (None, None) => []
+      }
+    })
   | _ =>
     let label = if path === "" { "root" } else { path }
     [{path: label, oldVal: JSON.stringify(old), newVal: JSON.stringify(cur)}]
@@ -190,13 +220,20 @@ module Overlay = {
       let (selectedId, setSelectedId) = React.useState(() => None)
       let (collapsed, setCollapsed) = React.useState(() => false)
       let (filter, setFilter) = React.useState(() => "")
+      let (selectedHistoryNum, setSelectedHistoryNum) = React.useState(() => None)
 
       let instances = Dict.toArray(snapshot)
 
       React.useEffect1(() => {
-        switch (selectedId, instances->Array.at(0)) {
-        | (None, Some((key, _))) => setSelectedId(_ => Some(key))
-        | _ => ()
+        let needsReselect = switch selectedId {
+        | None => true
+        | Some(id) => Dict.get(snapshot, id)->Option.isNone
+        }
+        if needsReselect {
+          switch instances->Array.at(0) {
+          | Some((key, _)) => setSelectedId(_ => Some(key))
+          | None => setSelectedId(_ => None)
+          }
         }
         None
       }, [instances])
@@ -240,13 +277,32 @@ module Overlay = {
           | None =>
             <div className="debug-body"> {React.string("No instances registered")} </div>
           | Some(data) =>
+            let indexedHistory =
+              data.history->Array.mapWithIndex((entry, idx) => (entry, idx + 1))
             let filteredHistory =
-              data.history->Array.filter(entry => {
+              indexedHistory->Array.filter(((entry, _)) => {
                 let tag = actionTag(entry.actionStr)->String.toLowerCase
                 !(hiddenTags->Array.some(h => tag === h))
               })
 
-            let diffs = computeDiff(data.previousModelJson, data.currentModelJson)
+            let (diffs, diffLabel) = switch selectedHistoryNum {
+            | Some(num) =>
+              let prevJson =
+                data.history
+                ->Array.get(num - 2)
+                ->Option.map(e => e.modelJson)
+                ->Option.getOr("{}")
+              let curJson =
+                data.history
+                ->Array.get(num - 1)
+                ->Option.map(e => e.modelJson)
+                ->Option.getOr("{}")
+              (computeDiff(prevJson, curJson), "Diff (step " ++ Int.toString(num) ++ ")")
+            | None => (
+                computeDiff(data.previousModelJson, data.currentModelJson),
+                "Diff (live)",
+              )
+            }
 
             <div className="debug-body">
               <div className="debug-section">
@@ -255,7 +311,7 @@ module Overlay = {
               </div>
               {if Array.length(diffs) > 0 {
                 <div className="debug-section">
-                  <div className="debug-section-title"> {React.string("Diff")} </div>
+                  <div className="debug-section-title"> {React.string(diffLabel)} </div>
                   <div className="debug-diff">
                     {React.array(
                       diffs->Array.mapWithIndex((d, idx) => {
@@ -279,7 +335,7 @@ module Overlay = {
                       "History (" ++
                       Int.toString(Array.length(filteredHistory)) ++
                       "/" ++
-                      Int.toString(Array.length(data.history)) ++
+                      Int.toString(Array.length(indexedHistory)) ++
                       ")",
                     )}
                   </div>
@@ -305,13 +361,22 @@ module Overlay = {
                 <div className="debug-history">
                   {React.array(
                     filteredHistory
-                    ->Array.mapWithIndex((entry, originalIdx) => (entry, originalIdx + 1))
                     ->Array.toReversed
                     ->Array.mapWithIndex(((entry, num), idx) => {
+                      let isSelected = selectedHistoryNum == Some(num)
                       <div
                         key={Int.toString(idx)}
-                        className="debug-history-entry"
-                        onClick={_ => data.jumpToModel(entry.rawModel)}>
+                        className={isSelected
+                          ? "debug-history-entry debug-history-entry--selected"
+                          : "debug-history-entry"}
+                        onClick={_ => {
+                          if isSelected {
+                            setSelectedHistoryNum(_ => None)
+                          } else {
+                            setSelectedHistoryNum(_ => Some(num))
+                          }
+                          data.jumpToModel(entry.rawModel)
+                        }}>
                         <span className="debug-entry-num">
                           {React.string(Int.toString(num))}
                         </span>

@@ -204,6 +204,11 @@
   background: #333;
 }
 
+.debug-history-entry--selected {
+  background: #333;
+  outline: 1px solid var(--color-accent);
+}
+
 .debug-entry-num {
   font-size: 10px;
   color: var(--color-text-muted);

@@ -12,15 +12,18 @@ let useReducer = (init, update, runEffect) => {
     }
   }
 
-  let pendingActionRef = React.useRef(None)
+  let pendingActionsRef = React.useRef([])
+  let (flushCounter, setFlushCounter) = React.useState(() => 0)
 
   let wrappedRunEffect = (dispatch, wrappedEffect) => {
     switch wrappedEffect {
     | Some(effect) =>
       runEffect(msg => {
-        pendingActionRef.current = Some(
-          JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?"),
+        pendingActionsRef.current = Array.concat(
+          pendingActionsRef.current,
+          [JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?")],
         )
+        setFlushCounter(n => n + 1)
         dispatch(AppMsg(msg))
       }, effect)
     | None => ()
@@ -31,12 +34,14 @@ let useReducer = (init, update, runEffect) => {
 
   let jumpToModel = rawModel => wrappedDispatch(DebugSetModel(rawModel))
 
-  TimeTravelDebugger.useObserver(~model, ~pendingActionRef, ~jumpToModel)
+  TimeTravelDebugger.useObserver(~model, ~pendingActionsRef, ~flushCounter, ~jumpToModel)
 
   let userDispatch = React.useCallback1(msg => {
-    pendingActionRef.current = Some(
-      JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?"),
+    pendingActionsRef.current = Array.concat(
+      pendingActionsRef.current,
+      [JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?")],
     )
+    setFlushCounter(n => n + 1)
     wrappedDispatch(AppMsg(msg))
   }, [wrappedDispatch])
 
