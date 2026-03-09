@@ -17,9 +17,12 @@ type instanceData = {
 
 let instance: ref<option<instanceData>> = ref(None)
 let listeners: ref<array<unit => unit>> = ref([])
+let storeVersion: ref<int> = ref(0)
 
-let notifyListeners = () =>
+let notifyListeners = () => {
+  storeVersion.contents = storeVersion.contents + 1
   listeners.contents->Array.forEach(fn => fn())
+}
 
 let subscribe = (listener: unit => unit): (unit => unit) => {
   listeners.contents = Array.concat(listeners.contents, [listener])
@@ -27,6 +30,8 @@ let subscribe = (listener: unit => unit): (unit => unit) => {
     listeners.contents = listeners.contents->Array.filter(fn => fn !== listener)
   }
 }
+
+let getSnapshot = () => storeVersion.contents
 
 // --- Action buffer (module-level, shared by all consumers) ---
 
@@ -281,17 +286,8 @@ let overlayReducer = (state, action) =>
 module Overlay = {
   @react.component
   let make = () => {
-    let (_, forceUpdate) = React.useState(() => 0)
+    let _ = React.useSyncExternalStore(~subscribe, ~getSnapshot)
     let (state, dispatch) = React.useReducer(overlayReducer, overlayInit)
-
-    React.useEffect0(() => {
-      let unsubscribe = subscribe(() => {
-        if !paused.contents {
-          forceUpdate(n => n + 1)
-        }
-      })
-      Some(unsubscribe)
-    })
 
     let parseTags = str =>
       str
@@ -386,7 +382,7 @@ module Overlay = {
                   className={"debug-header-btn" ++ (paused.contents ? " debug-header-btn--active" : "")}
                   onClick={_ => {
                     paused.contents = !paused.contents
-                    forceUpdate(n => n + 1)
+                    notifyListeners()
                   }}>
                   {React.string(paused.contents ? "Play" : "Pause")}
                 </button>
