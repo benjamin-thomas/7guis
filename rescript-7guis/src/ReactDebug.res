@@ -6,9 +6,11 @@ let useReducer = (reducer, init) => {
   let isMounted = React.useRef(true)
   React.useEffect0(() => {
     isMounted.current = true
-    Some(() => {
-      isMounted.current = false
-    })
+    Some(
+      () => {
+        isMounted.current = false
+      },
+    )
   })
 
   let (model, rawDispatch) = React.useReducer((model, msg) => {
@@ -23,9 +25,7 @@ let useReducer = (reducer, init) => {
 
   let dispatch = React.useCallback1(action => {
     if isMounted.current {
-      TimeTravelDebugger.reportAction(
-        JSON.stringifyAny(Obj.magic(action))->Option.getOr("?"),
-      )
+      TimeTravelDebugger.reportAction(JSON.stringifyAny(Obj.magic(action))->Option.getOr("?"))
       rawDispatch(AppMsg(action))
     }
   }, [rawDispatch])

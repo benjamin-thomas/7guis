@@ -9,12 +9,14 @@ let useReducer = (init, update, runEffect) => {
     mountEpochRef.current = mountEpochRef.current + 1
     let mountedEpoch = mountEpochRef.current
     isMounted.current = true
-    Some(() => {
-      if mountEpochRef.current === mountedEpoch {
-        mountEpochRef.current = mountEpochRef.current + 1
-      }
-      isMounted.current = false
-    })
+    Some(
+      () => {
+        if mountEpochRef.current === mountedEpoch {
+          mountEpochRef.current = mountEpochRef.current + 1
+        }
+        isMounted.current = false
+      },
+    )
   })
 
   let wrappedUpdate = (model, msg) => {
@@ -32,9 +34,12 @@ let useReducer = (init, update, runEffect) => {
 
   let wrappedRunEffect = (dispatch, wrappedEffect) => {
     switch wrappedEffect {
-    | Some((effect, effectEpoch)) =>
-      runEffect(msg => {
-        if isMounted.current && mountEpochRef.current === effectEpoch && !TimeTravelDebugger.isPaused() {
+    | Some((effect, effectEpoch)) => runEffect(msg => {
+        if (
+          isMounted.current &&
+          mountEpochRef.current === effectEpoch &&
+          !TimeTravelDebugger.isPaused()
+        ) {
           TimeTravelDebugger.reportAction(JSON.stringifyAny(Obj.magic(msg))->Option.getOr("?"))
           dispatch(AppMsg(msg, effectEpoch))
         }

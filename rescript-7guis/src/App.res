@@ -54,25 +54,25 @@ let make = () => {
       <a href="../../" className="back-link"> {React.string("< Back to root")} </a>
       <div className="index-container">
         <h1 className="index-title"> {React.string("7GUIs")} </h1>
-      <div className="index-grid">
-        <a href="#counter" className="card card--interactive"> {React.string("Counter")} </a>
-        <a href="#temperature-converter" className="card card--interactive">
-          {React.string("Temperature Converter")}
-        </a>
-        <a href="#flight-booker" className="card card--interactive">
-          {React.string("Flight Booker")}
-        </a>
-        <a href="#timer" className="card card--interactive"> {React.string("Timer")} </a>
-        <a href="#crud" className="card card--interactive"> {React.string("CRUD")} </a>
-        <a href="#circle-drawer" className="card card--interactive">
-          {React.string("Circle Drawer")}
-        </a>
-        <a href="#cells" className="card card--interactive"> {React.string("Cells")} </a>
-        <a href="#timer2" className="card card--interactive">
-          {React.string("Timer 2")}
-          <span className="card-subtitle"> {React.string("With effects as data")} </span>
-        </a>
-      </div>
+        <div className="index-grid">
+          <a href="#counter" className="card card--interactive"> {React.string("Counter")} </a>
+          <a href="#temperature-converter" className="card card--interactive">
+            {React.string("Temperature Converter")}
+          </a>
+          <a href="#flight-booker" className="card card--interactive">
+            {React.string("Flight Booker")}
+          </a>
+          <a href="#timer" className="card card--interactive"> {React.string("Timer")} </a>
+          <a href="#crud" className="card card--interactive"> {React.string("CRUD")} </a>
+          <a href="#circle-drawer" className="card card--interactive">
+            {React.string("Circle Drawer")}
+          </a>
+          <a href="#cells" className="card card--interactive"> {React.string("Cells")} </a>
+          <a href="#timer2" className="card card--interactive">
+            {React.string("Timer 2")}
+            <span className="card-subtitle"> {React.string("With effects as data")} </span>
+          </a>
+        </div>
       </div>
     </>
   | Counter => withBackLink(<Counter />)

@@ -80,12 +80,14 @@ let useInstance = (~model: 'model, ~jumpToModel: JSON.t => unit) => {
 
     let unsubscribeActions = subscribeActions(() => setTrigger(n => n + 1))
 
-    Some(() => {
-      instance.contents = None
-      pendingActions.contents = []
-      unsubscribeActions()
-      notifyListeners()
-    })
+    Some(
+      () => {
+        instance.contents = None
+        pendingActions.contents = []
+        unsubscribeActions()
+        notifyListeners()
+      },
+    )
   })
 
   React.useEffect2(() => {
@@ -129,8 +131,7 @@ let actionTag = (actionStr: string): string => {
     | None => actionStr
     | exception _ => actionStr
     }
-  | false =>
-    actionStr->String.replaceAll("\"", "")
+  | false => actionStr->String.replaceAll("\"", "")
   }
 }
 
@@ -142,7 +143,8 @@ let rec jsonDiff = (~path="", old: JSON.t, cur: JSON.t): array<diffEntry> => {
   | (JSON.Object(oldObj), JSON.Object(curObj)) =>
     let allKeys = Dict.keysToArray(oldObj)->Array.concat(Dict.keysToArray(curObj))
     let seen = Dict.make()
-    allKeys->Array.filterMap(key => {
+    allKeys
+    ->Array.filterMap(key => {
       if Dict.get(seen, key)->Option.isSome {
         None
       } else {
@@ -164,12 +166,9 @@ let rec jsonDiff = (~path="", old: JSON.t, cur: JSON.t): array<diffEntry> => {
     ->Array.flat
   | (JSON.Array(oldArr), JSON.Array(curArr)) =>
     let maxLen = Math.Int.max(Array.length(oldArr), Array.length(curArr))
-    Array.fromInitializer(~length=maxLen, i => i)
-    ->Array.flatMap(i => {
+    Array.fromInitializer(~length=maxLen, i => i)->Array.flatMap(i => {
       let subPath =
-        path === ""
-          ? "[" ++ Int.toString(i) ++ "]"
-          : path ++ "[" ++ Int.toString(i) ++ "]"
+        path === "" ? "[" ++ Int.toString(i) ++ "]" : path ++ "[" ++ Int.toString(i) ++ "]"
       switch (oldArr->Array.get(i), curArr->Array.get(i)) {
       | (Some(a), Some(b)) => jsonDiff(~path=subPath, a, b)
       | (Some(a), None) => [{path: subPath, oldVal: JSON.stringify(a), newVal: "(removed)"}]
@@ -178,7 +177,11 @@ let rec jsonDiff = (~path="", old: JSON.t, cur: JSON.t): array<diffEntry> => {
       }
     })
   | _ =>
-    let label = if path === "" { "root" } else { path }
+    let label = if path === "" {
+      "root"
+    } else {
+      path
+    }
     [{path: label, oldVal: JSON.stringify(old), newVal: JSON.stringify(cur)}]
   }
 }
@@ -302,73 +305,68 @@ module Overlay = {
     | None => React.null
     | Some(data) =>
       if state.collapsed {
-          <button
-            className={"debug-toggle" ++ (state.onLeft ? " debug-toggle--left" : "")}
-            onClick={_ => dispatch(Expand)}>
-            {React.string("Debug")}
-          </button>
-        } else {
-          let indexedHistory =
-            data.history->Array.mapWithIndex((entry, idx) => (entry, idx + 1))
-          let filteredHistory =
-            indexedHistory->Array.filter(((entry, _)) => {
-              let tag = actionTag(entry.actionStr)->String.toLowerCase
-              !(hiddenTags->Array.some(h => tag === h))
-            })
+        <button
+          className={"debug-toggle" ++ (state.onLeft ? " debug-toggle--left" : "")}
+          onClick={_ => dispatch(Expand)}
+        >
+          {React.string("Debug")}
+        </button>
+      } else {
+        let indexedHistory = data.history->Array.mapWithIndex((entry, idx) => (entry, idx + 1))
+        let filteredHistory = indexedHistory->Array.filter(((entry, _)) => {
+          let tag = actionTag(entry.actionStr)->String.toLowerCase
+          !(hiddenTags->Array.some(h => tag === h))
+        })
 
-          // Collapse consecutive runs of the same tag
-          let displayHistory = {
-            let shouldCollapse = tag =>
-              collapseTags->Array.some(c => c === tag->String.toLowerCase)
+        // Collapse consecutive runs of the same tag
+        let displayHistory = {
+          let shouldCollapse = tag => collapseTags->Array.some(c => c === tag->String.toLowerCase)
 
-            filteredHistory->Array.reduce([], (acc, (entry, num)) => {
-              let tag = actionTag(entry.actionStr)
-              switch acc->Array.at(-1) {
-              | Some((_prevEntry, _prevNum, count, prevTag))
-                if prevTag === tag && shouldCollapse(tag) =>
-                // Replace the last element with updated entry/count
-                let len = Array.length(acc)
-                let _ = acc->Array.splice(~start=len - 1, ~remove=1, ~insert=[(entry, num, count + 1, tag)])
-                acc
-              | _ =>
-                let _ = acc->Array.push((entry, num, 1, tag))
-                acc
-              }
-            })
-          }
+          filteredHistory->Array.reduce([], (acc, (entry, num)) => {
+            let tag = actionTag(entry.actionStr)
+            switch acc->Array.at(-1) {
+            | Some((_prevEntry, _prevNum, count, prevTag))
+              if prevTag === tag && shouldCollapse(tag) =>
+              // Replace the last element with updated entry/count
+              let len = Array.length(acc)
+              let _ =
+                acc->Array.splice(~start=len - 1, ~remove=1, ~insert=[(entry, num, count + 1, tag)])
+              acc
+            | _ =>
+              let _ = acc->Array.push((entry, num, 1, tag))
+              acc
+            }
+          })
+        }
 
-          let isActionHidden = (entry: historyEntry) => {
-            let tag = actionTag(entry.actionStr)->String.toLowerCase
-            hiddenTags->Array.some(h => tag === h)
-          }
+        let isActionHidden = (entry: historyEntry) => {
+          let tag = actionTag(entry.actionStr)->String.toLowerCase
+          hiddenTags->Array.some(h => tag === h)
+        }
 
-          let diffHidden = switch state.selectedHistoryNum {
-          | Some(num) =>
-            data.history->Array.get(num - 1)->Option.map(isActionHidden)->Option.getOr(false)
-          | None =>
-            data.history->Array.at(-1)->Option.map(isActionHidden)->Option.getOr(false)
-          }
+        let diffHidden = switch state.selectedHistoryNum {
+        | Some(num) =>
+          data.history->Array.get(num - 1)->Option.map(isActionHidden)->Option.getOr(false)
+        | None => data.history->Array.at(-1)->Option.map(isActionHidden)->Option.getOr(false)
+        }
 
-          let (diffs, diffLabel) = switch state.selectedHistoryNum {
-          | Some(num) =>
-            let prevJson =
-              data.history
-              ->Array.get(num - 2)
-              ->Option.map(e => e.modelJson)
-              ->Option.getOr("{}")
-            let curJson =
-              data.history
-              ->Array.get(num - 1)
-              ->Option.map(e => e.modelJson)
-              ->Option.getOr("{}")
-            (computeDiff(prevJson, curJson), "Diff (step " ++ Int.toString(num) ++ ")")
-          | None => (
-              computeDiff(data.previousModelJson, data.currentModelJson),
-              "Diff (live)",
-            )
-          }
+        let (diffs, diffLabel) = switch state.selectedHistoryNum {
+        | Some(num) =>
+          let prevJson =
+            data.history
+            ->Array.get(num - 2)
+            ->Option.map(e => e.modelJson)
+            ->Option.getOr("{}")
+          let curJson =
+            data.history
+            ->Array.get(num - 1)
+            ->Option.map(e => e.modelJson)
+            ->Option.getOr("{}")
+          (computeDiff(prevJson, curJson), "Diff (step " ++ Int.toString(num) ++ ")")
+        | None => (computeDiff(data.previousModelJson, data.currentModelJson), "Diff (live)")
+        }
 
-          <>
+        <>
           {if paused.contents {
             <div className="debug-app-lock" />
           } else {
@@ -379,21 +377,20 @@ module Overlay = {
               <span className="debug-title"> {React.string("Time Travel Debugger")} </span>
               <span className="debug-header-buttons">
                 <button
-                  className={"debug-header-btn" ++ (paused.contents ? " debug-header-btn--active" : "")}
+                  className={"debug-header-btn" ++ (
+                    paused.contents ? " debug-header-btn--active" : ""
+                  )}
                   onClick={_ => {
                     paused.contents = !paused.contents
                     notifyListeners()
-                  }}>
+                  }}
+                >
                   {React.string(paused.contents ? "Play" : "Pause")}
                 </button>
-                <button
-                  className="debug-header-btn"
-                  onClick={_ => dispatch(ToggleSide)}>
+                <button className="debug-header-btn" onClick={_ => dispatch(ToggleSide)}>
                   {React.string(state.onLeft ? "Right" : "Left")}
                 </button>
-                <button
-                  className="debug-header-btn"
-                  onClick={_ => dispatch(Collapse)}>
+                <button className="debug-header-btn" onClick={_ => dispatch(Collapse)}>
                   {React.string("Min")}
                 </button>
               </span>
@@ -401,16 +398,16 @@ module Overlay = {
             <div className="debug-body">
               <div
                 className="debug-section debug-section--panel"
-                style={height: Int.toString(state.modelHeight) ++ "px"}>
+                style={height: Int.toString(state.modelHeight) ++ "px"}
+              >
                 <div className="debug-section-title"> {React.string("Current Model")} </div>
                 <pre className="debug-model"> {React.string(data.currentModelJson)} </pre>
               </div>
-              <ResizeHandle
-                onDrag={dy => dispatch(DragModelPanel(dy))}
-              />
+              <ResizeHandle onDrag={dy => dispatch(DragModelPanel(dy))} />
               <div
                 className="debug-section debug-section--panel"
-                style={height: Int.toString(state.diffHeight) ++ "px"}>
+                style={height: Int.toString(state.diffHeight) ++ "px"}
+              >
                 <div className="debug-section-title"> {React.string(diffLabel)} </div>
                 {if diffHidden {
                   <div className="debug-diff-hidden"> {React.string("Hidden")} </div>
@@ -429,9 +426,7 @@ module Overlay = {
                   </div>
                 }}
               </div>
-              <ResizeHandle
-                onDrag={dy => dispatch(DragDiffPanel(dy))}
-              />
+              <ResizeHandle onDrag={dy => dispatch(DragDiffPanel(dy))} />
               <div className="debug-section debug-section--history">
                 <div className="debug-section-header">
                   <div className="debug-section-title">
@@ -439,8 +434,7 @@ module Overlay = {
                       "History (" ++
                       Int.toString(Array.length(displayHistory)) ++
                       "/" ++
-                      Int.toString(Array.length(indexedHistory)) ++
-                      ")",
+                      Int.toString(Array.length(indexedHistory)) ++ ")",
                     )}
                   </div>
                   <button
@@ -449,7 +443,8 @@ module Overlay = {
                       data.history = []
                       paused.contents = false
                       notifyListeners()
-                    }}>
+                    }}
+                  >
                     {React.string("Clear")}
                   </button>
                 </div>
@@ -473,12 +468,11 @@ module Overlay = {
                       parts->Array.at(-1)->Option.getOr("")->String.trim->String.toLowerCase
                     }
 
-                    let suggestions =
-                      allTags->Array.filter(tag => {
-                        let lower = tag->String.toLowerCase
-                        let alreadyUsed = excludeTags->Array.some(h => h === lower)
-                        !alreadyUsed && currentInput !== "" && lower->String.startsWith(currentInput)
-                      })
+                    let suggestions = allTags->Array.filter(tag => {
+                      let lower = tag->String.toLowerCase
+                      let alreadyUsed = excludeTags->Array.some(h => h === lower)
+                      !alreadyUsed && currentInput !== "" && lower->String.startsWith(currentInput)
+                    })
 
                     let completeWith = tag => {
                       let parts = value->String.split(",")
@@ -518,7 +512,8 @@ module Overlay = {
                               <button
                                 key={Int.toString(idx)}
                                 className="debug-suggestion"
-                                onClick={_ => completeWith(tag)}>
+                                onClick={_ => completeWith(tag)}
+                              >
                                 {React.string(tag)}
                               </button>
                             }),
@@ -565,10 +560,9 @@ module Overlay = {
                             dispatch(SelectHistory(num))
                           }
                           data.jumpToModel(entry.rawModel)
-                        }}>
-                        <span className="debug-entry-num">
-                          {React.string(Int.toString(num))}
-                        </span>
+                        }}
+                      >
+                        <span className="debug-entry-num"> {React.string(Int.toString(num))} </span>
                         <span className="debug-action-name">
                           {React.string(actionTag(entry.actionStr))}
                         </span>
@@ -586,7 +580,7 @@ module Overlay = {
               </div>
             </div>
           </div>
-          </>
+        </>
       }
     }
   }
