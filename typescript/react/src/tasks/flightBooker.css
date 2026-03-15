@@ -1,0 +1,26 @@
+.flight-booker {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flight-booker .input {
+  width: 100%;
+  text-align: center;
+}
+
+.flight-select {
+  cursor: pointer;
+}
+
+.input--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .flight-booker .input,
+  .flight-booker .button {
+    font-size: 1.5rem;
+  }
+}

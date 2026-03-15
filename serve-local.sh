@@ -42,6 +42,17 @@ npx vite build --base=/rescript/react/ 2>&1
 cp -r dist/* "$DOCS/rescript/react/"
 echo "  ReScript: done"
 
+# ============ TypeScript/React ============
+echo ""
+echo "=== Building TypeScript/React ==="
+cd "$ROOT/typescript/react"
+[ -d node_modules ] || npm ci
+npx tsc --noEmit
+npx vite build --base=/typescript/react/ 2>&1
+mkdir -p "$DOCS/typescript/react"
+cp -r dist/* "$DOCS/typescript/react/"
+echo "  TypeScript/React: done"
+
 # ============ Elm ============
 echo ""
 echo "=== Building Elm ==="
@@ -102,6 +113,7 @@ echo "============================================="
 echo "  Serving on http://localhost:$PORT"
 echo ""
 echo "  ReScript:    http://localhost:$PORT/rescript/react/#counter"
+echo "  TypeScript:  http://localhost:$PORT/typescript/react/"
 echo "  Elm:         http://localhost:$PORT/elm/counter/"
 echo "  PureScript:  http://localhost:$PORT/purescript/halogen/counter/"
 echo "============================================="

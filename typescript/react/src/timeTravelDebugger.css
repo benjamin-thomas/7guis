@@ -1,0 +1,353 @@
+.debug-overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 420px;
+  background: #1e1e1e;
+  border: 1px solid var(--color-border);
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 12px;
+  color: var(--color-text);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.debug-overlay--left {
+  right: auto;
+  left: 0;
+}
+
+/* Single themed scrollbar for the whole overlay */
+.debug-overlay * {
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+
+.debug-toggle {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background: var(--color-accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 9999;
+}
+
+.debug-app-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: not-allowed;
+}
+
+.debug-toggle--left {
+  right: auto;
+  left: 10px;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #252525;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.debug-title {
+  font-weight: 600;
+  color: var(--color-accent);
+  font-size: 13px;
+}
+
+.debug-header-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.debug-header-btn {
+  background: #333;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.debug-header-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.debug-header-btn--active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.debug-body {
+  padding: 8px 12px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.debug-section {
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.debug-section--panel {
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-section--history {
+  flex: 1;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.debug-resize-handle {
+  height: 5px;
+  flex-shrink: 0;
+  cursor: row-resize;
+  background: transparent;
+  position: relative;
+}
+
+.debug-resize-handle::after {
+  content: "";
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 2px;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.debug-resize-handle:hover::after,
+.debug-resize-handle:active::after {
+  background: var(--color-accent);
+}
+
+.debug-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.debug-section-title {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.debug-model {
+  background: #2a2a2a;
+  padding: 8px;
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+
+.debug-diff-hidden {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-style: italic;
+  padding: 3px 8px;
+}
+
+.debug-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.debug-diff-entry {
+  padding: 3px 8px;
+  background: #2a2a2a;
+  border-radius: var(--radius);
+  font-size: 11px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.debug-diff-path {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.debug-diff-old {
+  color: #f87171;
+  text-decoration: line-through;
+}
+
+.debug-diff-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.debug-diff-new {
+  color: #4ade80;
+}
+
+.debug-overlay .debug-filter {
+  width: 100%;
+  height: auto;
+  background: #2a2a2a;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  outline: none;
+}
+
+.debug-overlay .debug-filter:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.debug-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.debug-suggestion {
+  background: #333;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+.debug-suggestion:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.debug-history {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.debug-history-entry {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: #2a2a2a;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.debug-history-entry:hover {
+  background: #333;
+}
+
+.debug-history-entry--selected {
+  background: #333;
+  outline: 1px solid var(--color-accent);
+}
+
+.debug-entry-num {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  min-width: 28px;
+  text-align: right;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.debug-action-name {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.debug-entry-count {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.debug-jump-btn {
+  background: var(--color-button);
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.debug-jump-btn:hover {
+  background: var(--color-button-hover);
+}
+
+/* Reset global element-level styles from 7guis-theme.css */
+.debug-overlay button,
+.debug-toggle {
+  font-size: inherit;
+  height: auto;
+  padding: revert;
+}
+
+.debug-overlay input {
+  font-family: inherit;
+  font-size: inherit;
+  height: auto;
+  width: auto;
+  text-align: left;
+  background: inherit;
+  border: none;
+  padding: 0;
+}

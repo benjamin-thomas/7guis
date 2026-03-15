@@ -35,6 +35,14 @@ jobs:
           npm test
           npx vite build --base=/7guis/rescript/react/
 
+      # ============ TypeScript/React ============
+      - name: Build TypeScript/React
+        working-directory: typescript/react
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npx vite build --base=/7guis/typescript/react/
+
       # ============ Elm ============
       - name: Install Elm
         run: |
@@ -106,6 +114,10 @@ jobs:
 
           # Landing page
           cp landing/index.html docs/
+
+          # TypeScript/React
+          mkdir -p docs/typescript/react
+          cp -r typescript/react/dist/* docs/typescript/react/
 
           # ReScript
           cp -r rescript-7guis/dist/* docs/rescript/react/
