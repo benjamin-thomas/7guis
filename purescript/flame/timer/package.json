@@ -1,0 +1,16 @@
+{
+  "name": "7guis-flame-timer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "spago test",
+    "dev": "spago build && VITE_DEBUG=1 VITE_DEBUG_HISTORY_CAP=9999 vite",
+    "dev:no-dbg": "spago build && VITE_DEBUG=0 vite",
+    "build": "spago build && vite build",
+    "build:pages": "spago build && vite build --base=/7guis/purescript/flame/timer/",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

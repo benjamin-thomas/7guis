@@ -1,0 +1,31 @@
+# Local vendored copy of purescript-flame 1.6.0, so we can patch the runtime
+# (e.g. add a devtools hook: observe transitions + setModel). Referenced from
+# the root spago.yaml via `extraPackages: flame: { path: vendor/flame }`.
+# Dependencies mirror flame's purs.json manifest.
+package:
+  name: flame
+  dependencies:
+    - aff
+    - argonaut-codecs
+    - argonaut-core
+    - argonaut-generic
+    - arrays
+    - bifunctors
+    - console
+    - effect
+    - either
+    - exceptions
+    - foldable-traversable
+    - foreign
+    - foreign-object
+    - maybe
+    - nullable
+    - partial
+    - prelude
+    - refs
+    - strings
+    - tuples
+    - typelevel-prelude
+    - unsafe-coerce
+    - web-dom
+    - web-events

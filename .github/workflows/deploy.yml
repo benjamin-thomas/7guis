@@ -105,6 +105,23 @@ jobs:
             fi
           done
 
+      # ============ PureScript/Flame ============
+      # NOTE: uses the *new* spago (spago.yaml). The halogen projects above use
+      # the old spago (spago.dhall), so Flame gets its own toolchain here.
+      - name: Setup PureScript (for Flame)
+        uses: purescript-contrib/setup-purescript@main
+        with:
+          purescript: "0.15.15"
+          spago: "unstable"
+
+      - name: Build PureScript/Flame (Timer)
+        working-directory: purescript/flame/timer
+        run: |
+          yarn install --frozen-lockfile
+          yarn test
+          # VITE_DEBUG=1 ships the time-travel debugger on the live site
+          VITE_DEBUG=1 VITE_DEBUG_HISTORY_CAP=9999 yarn build:pages
+
       # ============ Assemble docs/ ============
       - name: Assemble docs folder
         run: |
@@ -149,6 +166,13 @@ jobs:
               cp -r "purescript/halogen/$dir/prod/." "docs/purescript/halogen/$dir/"
             fi
           done
+
+          # PureScript/Flame — landing grid + docs page + one app per task
+          mkdir -p docs/purescript/flame/timer
+          cp purescript/flame/index.html docs/purescript/flame/
+          cp purescript/flame/docs.html docs/purescript/flame/
+          cp shared/7guis-theme.css docs/purescript/flame/
+          cp -r purescript/flame/timer/dist/* docs/purescript/flame/timer/
 
       # ============ Upload artifact ============
       - name: Setup Pages

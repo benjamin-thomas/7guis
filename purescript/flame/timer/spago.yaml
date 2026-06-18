@@ -1,0 +1,35 @@
+package:
+  name: flame-decoupled-effect-demo
+  dependencies:
+    - aff
+    - arrays
+    - console
+    - datetime
+    - effect
+    - either
+    - exceptions
+    - flame
+    - foldable-traversable
+    - integers
+    - maybe
+    - node-process
+    - nullable
+    - numbers
+    - prelude
+    - refs
+    - spec
+    - spec-node
+    - tuples
+    - web-dom
+    - web-events
+    - web-html
+  test:
+    main: Test.Main
+    dependencies: []
+workspace:
+  packageSet:
+    registry: 77.7.0
+  # `flame` is vendored as a local workspace package under vendor/flame/ (its
+  # spago.yaml is auto-discovered), which shadows the registry's flame 1.6.0 so
+  # we can patch the runtime (devtools hook). No extraPackages entry needed.
+  extraPackages: {}
