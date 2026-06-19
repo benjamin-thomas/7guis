@@ -24,6 +24,6 @@ meta = [
 ]
 
 [tools.lustre.build]
-minify = true
+minify = false
 no_html = true
 outdir = "docs"
