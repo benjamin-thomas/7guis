@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>7GUIs - Gleam/Lustre - Technical decisions</title>
+    <style>
+      :root {
+        --bg: #1a1a1a;
+        --panel: #242424;
+        --panel-2: #2a2a2a;
+        --border: #3a3a3a;
+        --text: #f5f5f5;
+        --muted: #9ca3af;
+        --accent: #f59e0b;
+        --green: #4ade80;
+        --red: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        border-bottom: 1px solid var(--border);
+        background: rgba(26, 26, 26, 0.94);
+        padding: 0.8rem 1.25rem;
+      }
+
+      .topbar a {
+        text-decoration: none;
+      }
+
+      .topbar .spacer {
+        flex: 1;
+      }
+
+      main {
+        width: min(100% - 2rem, 960px);
+        margin: 0 auto;
+        padding: 3rem 0 4rem;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: var(--accent);
+        line-height: 1.2;
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      h2 {
+        margin-top: 3rem;
+      }
+
+      .subtitle,
+      .muted {
+        color: var(--muted);
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 1.25rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+      }
+
+      code,
+      pre {
+        font-family: Consolas, "Liberation Mono", Menlo, monospace;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #111;
+        padding: 0.1rem 0.3rem;
+      }
+
+      pre {
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #111;
+        padding: 1rem;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin: 1.5rem 0;
+      }
+
+      .flow span {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--panel-2);
+        padding: 0.75rem;
+        text-align: center;
+      }
+
+      .ok {
+        color: var(--green);
+      }
+
+      .warn {
+        color: var(--red);
+      }
+
+      @media (max-width: 760px) {
+        .topbar {
+          flex-wrap: wrap;
+        }
+
+        .grid,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar">
+      <a href="../">&lt; Back</a>
+      <a href="./">Timer</a>
+      <span class="spacer"></span>
+      <span class="muted">Gleam / Lustre</span>
+    </nav>
+
+    <main>
+      <h1>Technical decisions</h1>
+      <p class="subtitle">7GUIs Timer in Gleam/Lustre, with effects as data and a local time-travel debugger.</p>
+
+      <section class="panel">
+        <h2>Goal</h2>
+        <p>
+          This port keeps the design that made the PureScript/Flame timer useful
+          to study: the update function is pure, side effects are returned as
+          inspectable values, tests assert on those values, and the runtime
+          interpreter is the only impure edge.
+        </p>
+      </section>
+
+      <h2>Shape</h2>
+      <div class="flow">
+        <span>Msg</span>
+        <span>update</span>
+        <span>Model + Instr</span>
+        <span>interpret</span>
+        <span>Effect Msg</span>
+      </div>
+
+      <pre><code>pub fn update(model: Model, msg: Msg) -&gt; #(Model, List(Instr))</code></pre>
+
+      <p>
+        `Instr` is the app-specific effect ADT. It describes work such as
+        starting the browser interval, notifying the fake server, or logging.
+        Nothing runs while `timer.update` executes.
+      </p>
+
+      <h2>Effects as data</h2>
+      <div class="grid">
+        <section class="panel">
+          <h3>Pure core</h3>
+          <p>`src/timer.gleam` owns `Model`, `Msg`, `Instr`, `init`, `update`, and `view`.</p>
+        </section>
+        <section class="panel">
+          <h3>Runtime edge</h3>
+          <p>`src/lustre_timer.gleam` maps each `Instr` into a Lustre `Effect`.</p>
+        </section>
+        <section class="panel">
+          <h3>Tests</h3>
+          <p>`test/lustre_timer_test.gleam` compares exact `(Model, List(Instr))` values.</p>
+        </section>
+      </div>
+
+      <pre><code>StartBtnClicked
+-&gt; Model(timer_state: Running(0.0), ...)
+-&gt; [StartTimer, ConsoleLog("Timer started")]</code></pre>
+
+      <h2>Why not call effects directly?</h2>
+      <p>
+        Calling `setInterval`, server code, or logging from `update` would make
+        the state machine hard to test and harder to rewind. Returning
+        instructions keeps the behavior visible and lets the debugger record
+        clean state transitions.
+      </p>
+
+      <h2>Lustre integration</h2>
+      <p>
+        Lustre already has managed `Effect(msg)` values. This example adds one
+        level above that: domain effects are first-class application data, then
+        the interpreter lowers them into Lustre effects.
+      </p>
+
+      <pre><code>fn update(model, msg) {
+  let #(next_model, instructions) = timer.update(model, msg)
+  #(next_model, interpret_all(instructions))
+}</code></pre>
+
+      <h2>Timer source</h2>
+      <p>
+        The browser interval lives in `timer_ffi.js`. `StartTimer` creates a
+        recurring source that dispatches `Ticked(100.0)`. `StopTimer` clears it.
+        `NotifyServer` simulates a round trip and dispatches a success message.
+      </p>
+
+      <h2>Debugger</h2>
+      <p>
+        The app mounts through `lustre_time_travel.application(init, update, view)`.
+        The package wraps the Lustre app, records every transition after the
+        app update, and can replace the current model when a history row is
+        selected. Selecting a row pauses live updates; clicking the overlay
+        resumes.
+      </p>
+
+      <p>
+        This debugger is vendored as an internal Gleam package here so the
+        example can be deployed and studied without depending on another local
+        repository. It is intentionally small enough to become a separate
+        package later.
+      </p>
+
+      <h2>Trade-offs</h2>
+      <ul>
+        <li><span class="ok">Good:</span> tests assert exact side-effect intent without mocks.</li>
+        <li><span class="ok">Good:</span> the debugger is app-agnostic and works without changing the timer domain module.</li>
+        <li><span class="warn">Cost:</span> `Instr` needs an interpreter, so simple apps have one extra layer.</li>
+        <li><span class="warn">Cost:</span> the debugger uses JavaScript reflection and should be treated as development tooling.</li>
+      </ul>
+
+      <h2>Runbook</h2>
+      <pre><code>gleam test
+gleam run -m lustre/dev start
+gleam run -m lustre/dev build</code></pre>
+    </main>
+  </body>
+</html>

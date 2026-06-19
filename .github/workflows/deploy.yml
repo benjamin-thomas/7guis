@@ -122,6 +122,20 @@ jobs:
           # VITE_DEBUG=1 ships the time-travel debugger on the live site
           VITE_DEBUG=1 VITE_DEBUG_HISTORY_CAP=9999 yarn build:pages
 
+      # ============ Gleam/Lustre ============
+      - name: Setup Gleam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29.0.2"
+          rebar3-version: "3.27.0"
+          gleam-version: "1.17.0"
+
+      - name: Build Gleam/Lustre (Timer)
+        working-directory: gleam/lustre
+        run: |
+          gleam test
+          gleam run -m lustre/dev build
+
       # ============ Assemble docs/ ============
       - name: Assemble docs folder
         run: |
@@ -173,6 +187,10 @@ jobs:
           cp purescript/flame/docs.html docs/purescript/flame/
           cp shared/7guis-theme.css docs/purescript/flame/
           cp -r purescript/flame/timer/dist/* docs/purescript/flame/timer/
+
+          # Gleam/Lustre — Timer app with technical decisions page
+          mkdir -p docs/gleam/lustre
+          cp -r gleam/lustre/docs/* docs/gleam/lustre/
 
       # ============ Upload artifact ============
       - name: Setup Pages

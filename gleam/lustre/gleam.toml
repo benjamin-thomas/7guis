@@ -1,0 +1,29 @@
+name = "lustre_timer"
+version = "1.0.0"
+target = "javascript"
+
+description = "7GUIs Timer implemented with Gleam, Lustre, effects as data, and a time-travel debugger."
+licences = ["MIT"]
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+lustre = ">= 5.6.0 and < 6.0.0"
+lustre_time_travel = { path = "./lustre_time_travel" }
+
+[dev_dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+lustre_dev_tools = ">= 2.3.6 and < 3.0.0"
+
+[tools.lustre.html]
+title = "7GUIs - Gleam - Lustre - Timer"
+stylesheets = [
+  { href = "/client.css" },
+]
+meta = [
+  { name = "viewport", content = "width=device-width, initial-scale=1" },
+]
+
+[tools.lustre.build]
+minify = true
+no_html = true
+outdir = "docs"

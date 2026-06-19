@@ -1,0 +1,13 @@
+name = "lustre_time_travel"
+version = "0.1.0"
+target = "javascript"
+
+description = "A time-travel debugger wrapper for Lustre applications."
+licences = ["Apache-2.0"]
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+lustre = ">= 5.6.0 and < 6.0.0"
+
+[dev_dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"

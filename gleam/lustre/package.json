@@ -1,0 +1,11 @@
+{
+  "name": "7guis-gleam-lustre",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "gleam test",
+    "dev": "gleam run -m lustre/dev start",
+    "build": "gleam run -m lustre/dev build",
+    "preview": "python3 -m http.server 4173 -d docs"
+  }
+}
