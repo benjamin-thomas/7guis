@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7GUIs - Gleam/Lustre</title>
+    <link rel="stylesheet" href="7guis-theme.css">
+    <style>
+        .card--todo {
+            opacity: 0.4;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .card--todo::after {
+            content: "soon";
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            color: var(--color-text-muted, #888);
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../" class="back-link">&lt; Back to root</a>
+    <div class="index-container">
+        <h1 class="index-title">7GUIs</h1>
+        <p class="task-subtitle">Gleam / Lustre - effects as data with time travel</p>
+        <div class="index-grid">
+            <span class="card card--todo">Counter</span>
+            <span class="card card--todo">Temperature Converter</span>
+            <span class="card card--todo">Flight Booker</span>
+            <a class="card card--interactive" href="lustre/">Timer</a>
+            <span class="card card--todo">CRUD</span>
+            <span class="card card--todo">Circle Drawer</span>
+            <span class="card card--todo">Cells</span>
+        </div>
+    </div>
+</body>
+
+</html>

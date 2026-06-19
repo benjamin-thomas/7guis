@@ -112,9 +112,6 @@ pub fn view(model: Model) -> Element(Msg) {
     html.a([attribute.class("back-link"), attribute.href("../")], [
       element.text("< Back"),
     ]),
-    html.a([attribute.class("docs-link"), attribute.href("./docs.html")], [
-      element.text("Technical decisions"),
-    ]),
     html.div([attribute.class("task-container")], [
       html.h1([attribute.class("task-title")], [
         element.text("Gleam Timer"),

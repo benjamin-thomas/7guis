@@ -188,8 +188,11 @@ jobs:
           cp shared/7guis-theme.css docs/purescript/flame/
           cp -r purescript/flame/timer/dist/* docs/purescript/flame/timer/
 
-          # Gleam/Lustre — Timer app with technical decisions page
+          # Gleam/Lustre - landing grid + Timer app with technical decisions page
+          mkdir -p docs/gleam
           mkdir -p docs/gleam/lustre
+          cp gleam/index.html docs/gleam/
+          cp shared/7guis-theme.css docs/gleam/
           cp -r gleam/lustre/docs/* docs/gleam/lustre/
 
       # ============ Upload artifact ============

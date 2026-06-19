@@ -75,8 +75,7 @@ input {
   letter-spacing: 0;
 }
 
-.back-link,
-.docs-link {
+.back-link {
   position: fixed;
   top: var(--spacing-md);
   z-index: 3;
@@ -89,18 +88,8 @@ input {
   left: var(--spacing-md);
 }
 
-.docs-link {
-  left: 7.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-card);
-  padding: 0.35rem 0.65rem;
-}
-
-.back-link:hover,
-.docs-link:hover {
+.back-link:hover {
   color: var(--color-accent);
-  border-color: var(--color-accent);
 }
 
 .card {
@@ -242,15 +231,6 @@ input {
 
   .task-title {
     font-size: 2rem;
-  }
-
-  .docs-link {
-    left: auto;
-    right: var(--spacing-sm);
-    max-width: calc(100vw - 9rem);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .back-link {
