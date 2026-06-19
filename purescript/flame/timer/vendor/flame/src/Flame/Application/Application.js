@@ -16,5 +16,6 @@ export const devtoolsConnect = (hook) => (handle) => () => {
     setModel: (model) => handle.setModel(model)(),
     setPaused: (paused) => handle.setPaused(paused)(),
     dispatch: (msg) => handle.dispatch(msg)(),
+    getModel: () => handle.getModel(),
   });
 };

@@ -89,10 +89,13 @@ type Observer model message = model → message → model → Effect Unit
 -- |   are ignored, so the app freezes while you time-travel. `setModel` still
 -- |   works (it bypasses the update loop).
 -- | * `dispatch` – inject a message, same path as a normal update
+-- | * `getModel` – read the current model (e.g. to seed a devtools panel on
+-- |   connect, or to stash state for hot reload)
 type DevTools model message =
       { setModel ∷ model → Effect Unit
       , setPaused ∷ Boolean → Effect Unit
       , dispatch ∷ message → Effect Unit
+      , getModel ∷ Effect model
       }
 
 noObserve ∷ ∀ model message. Observer model message
@@ -206,7 +209,7 @@ run parent isResumed appId observe application = do
             Just id → FSIL.createMessageListener id runUpdate
       DF.traverse_ (FSIL.createSubscription runUpdate) application.subscribe
 
-      let handle = { setModel: render, setPaused: \paused → ER.write paused pausedState, dispatch: runUpdate }
+      let handle = { setModel: render, setPaused: \paused → ER.write paused pausedState, dispatch: runUpdate, getModel: ER.read modelState }
       --hand the control handle to an external devtools, if one is installed
       case devtools of
             Just hook → devtoolsConnect hook handle
